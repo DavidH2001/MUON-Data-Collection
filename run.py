@@ -3,6 +3,7 @@ import glob
 import serial
 from data_collector import DataCollector
 
+
 def serial_ports():
     """ Lists serial port names.
 

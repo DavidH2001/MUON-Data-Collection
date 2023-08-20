@@ -15,12 +15,9 @@ import collections
 import codecs
 from datetime import datetime
 
-# Create a queue of NUM_BUFF buffers each having a life span of BUFF_TIME_MS. When NUM_BUFF buffers have been queued
-# the middle buffer is checked for its quantity/capture rate. This is then repeated for every subsequent buffer
-# received.
 
 class DataCollector:
-
+    """Data collector class."""
     def __init__(self,
                  com_port: str,
                  file_name: str,
@@ -74,14 +71,15 @@ class DataCollector:
                      max_buff_rate: int = 7,
                      buff_time_ms: int = 60000,
                      save_results: bool = True):
-
+        # Create a queue of num_buffs buffers each having a life span of buff_time_ms. When num_buffs buffers have been
+        # queued the middle buffer is checked for its quantity/capture rate. This is then repeated for every subsequent
+        # buffer received.
         _buff = []
         _num_buffs = num_buffs
         _max_buff_rate = max_buff_rate
         _buff_time_ms = buff_time_ms
         _start_time_ms = None
         _last_buff_saved_ms = None
-
         buff_queue = collections.deque(maxlen=_num_buffs)
         mid_buff = int(num_buffs / 2)
 
@@ -95,21 +93,23 @@ class DataCollector:
             parts = data.split()
             if _start_time_ms is None:
                 # set start time to arduino ms time
-                _start_ms = int(parts[3])
-                print(f'start_ms = {_start_time_ms}')
+                _start_time_ms = int(parts[3])
+                print(f'start_time_ms = {_start_time_ms}')
 
             print(f'ellapsed time = {int(parts[3]) - _start_time_ms}')
             if int(parts[3]) - _start_time_ms < _buff_time_ms:
                 _buff.append(data)
             else:
-                buff_queue.append(buff)
-                print(f'!!! got buff len = {len(buff)}, added to buff queue at index {len(buff_queue) - 1}')
+                buff_queue.append(_buff)
+                print(f'buff time {_buff_time_ms} exceeded, added the buff (len={len(_buff)}) to buff queue at index'
+                      f' {len(buff_queue) - 1}')
                 # start new buffer with latest event
-                buff = [data]
-                _start_ms = int(parts[3])
-                print(f'start_ms = {_start_ms}')
+                _buff = [data]
+                _start_time_ms = int(parts[3])
+                print(f'start_ms = {_start_time_ms}')
                 if len(buff_queue) == num_buffs:
-                    print(f'buff queue full, mid buff index = {mid_buff}, rate={len(buff_queue[mid_buff])}')
+                    print(f'buff queue now full with {num_buffs} buffs, mid buff index = {mid_buff}, '
+                          f'rate={len(buff_queue[mid_buff])}')
                     if len(buff_queue[mid_buff]) > max_buff_rate:
                         print('mid buff rate exceeded')
                         if save_results:
