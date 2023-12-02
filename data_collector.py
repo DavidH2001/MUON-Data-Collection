@@ -21,25 +21,35 @@ class DataCollector:
     def __init__(self,
                  com_port: str,
                  event_file_name: str = None,
-                 trigger_string: str = '',
-                 save_results: bool = True):
-
+                 **kwargs):
         """
         Constructor.
         :param com_port:
         :param event_file_name:
-        :param trigger_string:
-        :param save_results:
+        :param kwargs:
+               num_buffs: The maximum number of buffers to be held by the queue.
+               buff_threshold: Max event buffer trigger threshold.
+               buff_time_ms: The time span of a single buffer in milliseconds.
+               save_results: ??? do we need this ???
         """
         self._com_port = com_port
         self._event_file_name: str = event_file_name
+        self._num_buffs: int = kwargs.get('num_buffs', 5)
+        self._buff_threshold: int = kwargs.get('buff_threshold', 7)
+        self._buff_time_ms: int = kwargs.get('buff_time_ms', 60000)
+        self._trigger_string: bool = kwargs.get('trigger_string', '')
+        self._save_results: bool = kwargs.get('save_results', True)
+        self._start_time_ms: int = None
+        self._last_buff_saved_ms = None
+        self._buff: list = []
+
+        self._buff_queue: collections.deque = collections.deque(maxlen=self._num_buffs)
+        self._mid_buff: int = int(self._num_buffs / 2)
         self._event_file = None
-        self._save_results: bool = save_results
 
         if self._save_results:
             self._event_file = open(self._event_file_name, "w")
 
-        self._save_results: bool = save_results
         signal.signal(signal.SIGINT, self._signal_handler)
 
         print("\nTaking data ...")
@@ -50,10 +60,10 @@ class DataCollector:
         #com_port.parity = 'N'
         #com_port.stopbits = 1
         time.sleep(1)
-        if trigger_string != '':
+        if self._trigger_string != '':
             print("waiting for trigger string...")
-            self._wait_for_start(trigger_string)
-            print(f"Trigger string '{trigger_string}' detected, starting "
+            self._wait_for_start(self._trigger_string)
+            print(f"Trigger string '{self._trigger_string}' detected, starting "
                   "acquisition")
         print("Starting acquisition")
 
@@ -79,11 +89,7 @@ class DataCollector:
             if name in str(line):
                 break
 
-    def acquire_data(self,
-                     num_buffs: int = 5,
-                     buff_threshold: int = 7,
-                     buff_time_ms: int = 60000,
-                     save_results: bool = True) -> None:
+    def acquire_data(self) -> None:
         """
         Main data acquisition function used to sink the data from the serial port and hold it in a queue of buffers.
         When the buffer queue is full the middle buffer is checked against the trigger threshold. This is then
@@ -94,15 +100,6 @@ class DataCollector:
         :param buff_time_ms: The time span of a single buffer in milliseconds.
         :param save_results: ??? do we need this ???
         """
-        _buff: list = []
-        _num_buffs: int = num_buffs
-        _buff_threshold: int = buff_threshold
-        _buff_time_ms: int = buff_time_ms
-        _start_time_ms: int = None
-        _last_buff_saved_ms = None
-        buff_queue: collections.deque = collections.deque(maxlen=_num_buffs)
-        mid_buff: int = int(num_buffs / 2)
-
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
@@ -112,47 +109,47 @@ class DataCollector:
             data = str(datetime.now()) + " " + data
             print(data, end='')
             parts = data.split()
-            if _start_time_ms is None:
+            if self._start_time_ms is None:
                 # First time round so set start time to arduino ms time.
-                _start_time_ms = int(parts[3])
-                print(f'start_time_ms = {_start_time_ms}')
+                self._start_time_ms = int(parts[3])
+                print(f'start_time_ms = {self._start_time_ms}')
 
-            print(f'ellapsed time = {int(parts[3]) - _start_time_ms}')
+            print(f'ellapsed time = {int(parts[3]) - self._start_time_ms}')
 
             # Fill buffer with event data.
-            if int(parts[3]) - _start_time_ms < _buff_time_ms:
+            if int(parts[3]) - self._start_time_ms < self._buff_time_ms:
                 # Still within current buffer time period.
-                _buff.append(data)
+                self._buff.append(data)
             else:
                 # Outside of buffer time period.
-                buff_queue.append(_buff)
-                print(f'buff time {_buff_time_ms} exceeded, added the buff (len={len(_buff)}) to buff queue at index'
-                      f' {len(buff_queue) - 1}')
+                self._buff_queue.append(self._buff)
+                print(f'buff time {self._buff_time_ms} exceeded, added the buff (len={len(self._buff)}) to buff queue '
+                      f'at index {len(self._buff_queue) - 1}')
                 # Start new buffer with the latest event.
-                _buff = [data]
-                _start_time_ms = int(parts[3])
-                print(f'start_ms = {_start_time_ms}')
+                self._buff = [data]
+                self._start_time_ms = int(parts[3])
+                print(f'start_ms = {self._start_time_ms}')
 
                 # Check where we are in the buffer queue.
-                if len(buff_queue) == num_buffs:
-                    print(f'buff queue now full with {num_buffs} buffs, mid buff index = {mid_buff}, '
-                          f'rate={len(buff_queue[mid_buff])}')
+                if len(self._buff_queue) == self._num_buffs:
+                    print(f'buff queue now full with {self._num_buffs} buffs, mid buff index = {self._mid_buff}, '
+                          f'rate={len(self._buff_queue[self._mid_buff])}')
                     # Check content of middle buffer.
-                    if len(buff_queue[mid_buff]) > buff_threshold:
+                    if len(self._buff_queue[self._mid_buff]) > self._buff_threshold:
                         print('mid buff rate exceeded')
-                        if save_results:
-                            last_buff_saved_ms = buff_queue[-1][3]
+                        if self._save_results:
+                            last_buff_saved_ms = self._buff_queue[-1][3]
                             n = 0
-                            for i in range(num_buffs):
-                                if buff_queue[i][3] <= last_buff_saved_ms:
+                            for i in range(self._num_buffs):
+                                if self._buff_queue[i][3] <= last_buff_saved_ms:
                                     break
                                 else:
                                     n += 1
                             print(f"overlap = {n}")
                             # lines = [x for y in buff_queue for x in y]
                             lines = []
-                            for i in range(n, num_buffs):
-                                lines += buff_queue[i]
+                            for i in range(n, self._num_buffs):
+                                lines += self._buff_queue[i]
                             self._event_file.writelines(lines)
                             self._event_file.flush()
 

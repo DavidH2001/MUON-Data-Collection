@@ -46,9 +46,8 @@ class DataCollectorTest(unittest.TestCase):
         if True: #with tempfile.TemporaryFile() as data_file:
             with DataCollector(mock_com_port, data_file, trigger_string='', save_results=True) as data_collector:
                 # Middle buffer only contains 7 events so file should be empty.
-                data_collector.acquire_data(save_results=True)
+                data_collector.acquire_data()
                 self.assertTrue(os.stat(data_file).st_size == 0)
-
 
     def test_data_collector(self):
         """This test """
@@ -91,7 +90,7 @@ class DataCollectorTest(unittest.TestCase):
         if True: #with tempfile.TemporaryFile() as data_file:
             with DataCollector(mock_com_port, data_file, trigger_string='', save_results=True) as data_collector:
                 # Middle buffer only contains 7 events so file should be empty.
-                data_collector.acquire_data(save_results=True)
+                data_collector.acquire_data()
                 self.assertTrue(os.stat(data_file).st_size == 0)
 
 
@@ -100,7 +99,7 @@ class DataCollectorTest(unittest.TestCase):
                 data += [b'exit']
                 # Now buffer queue will bump along one buffer making the middle buffer now containing 13 events.
                 mock_com_port.readline.side_effect = data
-                data_collector.acquire_data(save_results=True)
+                data_collector.acquire_data()
                 # The data file should now contain the current buffer queue i.e. last NUM_BUFFS buffer writes.
                 self.assertTrue(os.stat(data_file).st_size > 0)
                 saved_data = pd.read_csv(data_file, sep=' ', header=None)
