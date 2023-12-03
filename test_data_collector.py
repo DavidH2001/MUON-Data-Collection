@@ -89,15 +89,13 @@ class DataCollectorTest(unittest.TestCase):
             os.remove(data_file)
         if True: #with tempfile.TemporaryFile() as data_file:
             with DataCollector(mock_com_port, data_file, trigger_string='', save_results=True) as data_collector:
-                # Middle buffer only contains 7 events so file should be empty.
+                # Middle data buffer only contained 7 events so file should be empty.
                 data_collector.acquire_data()
                 self.assertTrue(os.stat(data_file).st_size == 0)
-
-
                 # Add more data using the time of the last data item making sure we miss the 'exit' entry.
                 data = [f'{len(data)+x} {int(float(data[-2].split()[1]) + 60000 * x/8)}\n'.encode() for x in range(1, 9)]
                 data += [b'exit']
-                # Now buffer queue will bump along one buffer making the middle buffer now containing 13 events.
+                # Now buffer queue will bump along one more buffer resulting middle buffer now containing 13 events.
                 mock_com_port.readline.side_effect = data
                 data_collector.acquire_data()
                 # The data file should now contain the current buffer queue i.e. last NUM_BUFFS buffer writes.

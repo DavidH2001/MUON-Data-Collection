@@ -14,6 +14,8 @@ import time
 import collections
 import codecs
 from datetime import datetime
+from text_buff import TextBuff
+from buff_queue import BuffQueue
 
 
 class DataCollector:
@@ -41,10 +43,13 @@ class DataCollector:
         self._save_results: bool = kwargs.get('save_results', True)
         self._start_time_ms: int = None
         self._last_buff_saved_ms = None
-        self._buff: list = []
 
-        self._buff_queue: collections.deque = collections.deque(maxlen=self._num_buffs)
-        self._mid_buff: int = int(self._num_buffs / 2)
+        ###self._buff: list = []
+        ###self._buff_queue: collections.deque = collections.deque(maxlen=self._num_buffs)
+        ###self._mid_buff: int = int(self._num_buffs / 2)
+        self._buff = TextBuff()
+        self._buff_queue = BuffQueue()
+
         self._event_file = None
 
         if self._save_results:
@@ -54,11 +59,6 @@ class DataCollector:
 
         print("\nTaking data ...")
         print("Press ctl+c to terminate process")
-        #com_port = serial.Serial(port_name)
-        #com_port.baudrate = 9600
-        #com_port.bytesize = 8
-        #com_port.parity = 'N'
-        #com_port.stopbits = 1
         time.sleep(1)
         if self._trigger_string != '':
             print("waiting for trigger string...")
@@ -66,12 +66,6 @@ class DataCollector:
             print(f"Trigger string '{self._trigger_string}' detected, starting "
                   "acquisition")
         print("Starting acquisition")
-
-        ###buff = []
-        ###buff_queue = collections.deque(maxlen=NUM_BUFFS)
-        ###start_ms = None
-        ###last_buff_saved_ms = None
-        print("exit acquisition detected")
 
     def __enter__(self):
         return self
@@ -119,37 +113,57 @@ class DataCollector:
             # Fill buffer with event data.
             if int(parts[3]) - self._start_time_ms < self._buff_time_ms:
                 # Still within current buffer time period.
+                ###self._buff.append(data)
                 self._buff.append(data)
             else:
                 # Outside of buffer time period.
+                ###self._buff_queue.append(self._buff)
+                ###print(f'buff time {self._buff_time_ms} exceeded, added the buff (len={len(self._buff)}) to buff queue '
+                ###      f'at index {len(self._buff_queue) - 1}')
                 self._buff_queue.append(self._buff)
-                print(f'buff time {self._buff_time_ms} exceeded, added the buff (len={len(self._buff)}) to buff queue '
-                      f'at index {len(self._buff_queue) - 1}')
+                print(f'buff time {self._buff_time_ms} exceeded, added the buff (len={self._buff.num_entries}) to buff queue '
+                      f'at index {self._buff_queue.num_entries - 1}')
+
+
                 # Start new buffer with the latest event.
-                self._buff = [data]
+                ###self._buff = [data]
+                self._buff.append(data, reset=True)
+
                 self._start_time_ms = int(parts[3])
                 print(f'start_ms = {self._start_time_ms}')
 
                 # Check where we are in the buffer queue.
-                if len(self._buff_queue) == self._num_buffs:
-                    print(f'buff queue now full with {self._num_buffs} buffs, mid buff index = {self._mid_buff}, '
-                          f'rate={len(self._buff_queue[self._mid_buff])}')
+                ###if len(self._buff_queue) == self._num_buffs:
+                if self._buff_queue.num_entries == self._buff_queue.max_entries:
+                    ###print(f'buff queue now full with {self._num_buffs} buffs, mid buff index = {self._mid_buff}, '
+                    ###      f'rate={len(self._buff_queue[self._mid_buff])}')
+                    print(f'buff queue now full with {self._num_buffs} buffs, mid buff index = {self._buff_queue.mid_index}, '
+                          f'rate={len(self._buff_queue[self._buff_queue.mid_index])}')
+
                     # Check content of middle buffer.
-                    if len(self._buff_queue[self._mid_buff]) > self._buff_threshold:
+                    ###if len(self._buff_queue[self._mid_buff]) > self._buff_threshold:
+                    if len(self._buff_queue.peak(index=self._buff_queue.mid_index)) > self._buff_threshold:
+
                         print('mid buff rate exceeded')
                         if self._save_results:
-                            last_buff_saved_ms = self._buff_queue[-1][3]
+                            ###last_buff_saved_ms = self._buff_queue[-1][3]
+                            last_buff_saved_ms = self._buff_queue.peak(-1)[3]
+
                             n = 0
                             for i in range(self._num_buffs):
-                                if self._buff_queue[i][3] <= last_buff_saved_ms:
+                                ###if self._buff_queue[i][3] <= last_buff_saved_ms:
+                                if self._buff_queue.peak(i)[3] <= last_buff_saved_ms:
                                     break
                                 else:
                                     n += 1
                             print(f"overlap = {n}")
                             # lines = [x for y in buff_queue for x in y]
                             lines = []
-                            for i in range(n, self._num_buffs):
-                                lines += self._buff_queue[i]
+                            ###for i in range(n, self._num_buffs):
+                            for i in range(n, self._buf_queue.max_entries):
+                                ###lines += self._buff_queue[i]
+                                lines += self._buff_queue.peak(i)
+
                             self._event_file.writelines(lines)
                             self._event_file.flush()
 
