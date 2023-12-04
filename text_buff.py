@@ -4,7 +4,7 @@
 class TextBuff:
 
     def __init__(self, **kwargs):
-        self._max_entries = kwargs.get('max_entries', 7)
+        #self._max_entries = kwargs.get('max_entries', 7)
         self._buff = []
 
     @property

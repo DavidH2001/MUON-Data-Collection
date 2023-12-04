@@ -5,7 +5,7 @@ import collections
 class BuffQueue:
 
     def __init__(self, **kwargs):
-        self._max_entries = kwargs.get('max_entries', 7)
+        self._max_entries = kwargs.get('max_entries', 5)
         self._queue: collections.deque = collections.deque(maxlen=self._max_entries)
         self._mid_index: int = int(self._max_entries / 2)
 
@@ -24,8 +24,10 @@ class BuffQueue:
     def append(self, buff):
         self._queue.append(buff)
 
-    def peak(self, index: int = 0):
+    def peek(self, index: int = 0):
         return self._queue[index]
 
+    def is_full(self):
+        return self.num_entries >= self.max_entries
 
 

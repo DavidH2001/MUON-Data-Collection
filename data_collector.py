@@ -10,9 +10,11 @@ Detetcor will automatically reset when this program connects with it.
 
 import sys
 import signal
+import threading
 import time
-import collections
+import logging
 import codecs
+import copy
 from datetime import datetime
 from text_buff import TextBuff
 from buff_queue import BuffQueue
@@ -34,24 +36,20 @@ class DataCollector:
                buff_time_ms: The time span of a single buffer in milliseconds.
                save_results: ??? do we need this ???
         """
+        logging.basicConfig(encoding='utf-8', level=logging.INFO)
+
         self._com_port = com_port
         self._event_file_name: str = event_file_name
-        self._num_buffs: int = kwargs.get('num_buffs', 5)
         self._buff_threshold: int = kwargs.get('buff_threshold', 7)
         self._buff_time_ms: int = kwargs.get('buff_time_ms', 60000)
         self._trigger_string: bool = kwargs.get('trigger_string', '')
         self._save_results: bool = kwargs.get('save_results', True)
         self._start_time_ms: int = None
         self._last_buff_saved_ms = None
-
-        ###self._buff: list = []
-        ###self._buff_queue: collections.deque = collections.deque(maxlen=self._num_buffs)
-        ###self._mid_buff: int = int(self._num_buffs / 2)
         self._buff = TextBuff()
         self._buff_queue = BuffQueue()
-
         self._event_file = None
-
+        self._acquisition_ended = True
         if self._save_results:
             self._event_file = open(self._event_file_name, "w")
 
@@ -74,6 +72,10 @@ class DataCollector:
         if self._save_results:
             self._event_file.close()
 
+    @property
+    def acquisition_ended(self):
+        return self._acquisition_ended
+
     def _wait_for_start(self, name: str):
 
         while True:
@@ -83,89 +85,80 @@ class DataCollector:
             if name in str(line):
                 break
 
-    def acquire_data(self) -> None:
+    def _acquire_data(self) -> None:
         """
         Main data acquisition function used to sink the data from the serial port and hold it in a queue of buffers.
-        When the buffer queue is full the middle buffer is checked against the trigger threshold. This is then
-        repeated for every subsequent buffer received.
-
-        :param num_buffs: The maximum number of buffers to be held by the queue.
-        :param buff_threshold: Max event buffer trigger threshold.
-        :param buff_time_ms: The time span of a single buffer in milliseconds.
-        :param save_results: ??? do we need this ???
+        Each buffer can hold a number of events that arrive within the specified time period. When the buffer queue is
+        full the middle buffer is checked against the max number of events trigger threshold. This is then repeated for
+        every subsequent buffer received.
         """
+        self._acquisition_ended = False
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
             if data == b'exit':
+                logging.info("EXIT!!!")
                 break
             data = codecs.decode(data, 'UTF-8')
             data = str(datetime.now()) + " " + data
-            print(data, end='')
-            parts = data.split()
+            logging.info(data)
+            arduino_time = int(data.split()[3])
+
             if self._start_time_ms is None:
                 # First time round so set start time to arduino ms time.
-                self._start_time_ms = int(parts[3])
-                print(f'start_time_ms = {self._start_time_ms}')
+                self._start_time_ms = arduino_time
+                logging.info(f'start_time_ms = {self._start_time_ms}')
 
-            print(f'ellapsed time = {int(parts[3]) - self._start_time_ms}')
+            logging.info(f'elapsed time = {arduino_time - self._start_time_ms}')
 
             # Fill buffer with event data.
-            if int(parts[3]) - self._start_time_ms < self._buff_time_ms:
+            if arduino_time - self._start_time_ms < self._buff_time_ms:
                 # Still within current buffer time period.
-                ###self._buff.append(data)
                 self._buff.append(data)
             else:
                 # Outside of buffer time period.
-                ###self._buff_queue.append(self._buff)
-                ###print(f'buff time {self._buff_time_ms} exceeded, added the buff (len={len(self._buff)}) to buff queue '
-                ###      f'at index {len(self._buff_queue) - 1}')
-                self._buff_queue.append(self._buff)
-                print(f'buff time {self._buff_time_ms} exceeded, added the buff (len={self._buff.num_entries}) to buff queue '
-                      f'at index {self._buff_queue.num_entries - 1}')
+                logging.info(f'buff time {self._buff_time_ms} exceeded, added buff (len={self._buff.num_entries}) to '
+                             f'queue at index {self._buff_queue.num_entries}')
 
-
-                # Start new buffer with the latest event.
-                ###self._buff = [data]
+                # Add current buffer to queue.
+                self._buff_queue.append(copy.deepcopy(self._buff))
+                # Add new data to new buffer.
                 self._buff.append(data, reset=True)
 
-                self._start_time_ms = int(parts[3])
-                print(f'start_ms = {self._start_time_ms}')
+                self._start_time_ms = arduino_time
+                logging.info(f'start_ms = {self._start_time_ms}')
 
                 # Check where we are in the buffer queue.
-                ###if len(self._buff_queue) == self._num_buffs:
-                if self._buff_queue.num_entries == self._buff_queue.max_entries:
-                    ###print(f'buff queue now full with {self._num_buffs} buffs, mid buff index = {self._mid_buff}, '
-                    ###      f'rate={len(self._buff_queue[self._mid_buff])}')
-                    print(f'buff queue now full with {self._num_buffs} buffs, mid buff index = {self._buff_queue.mid_index}, '
-                          f'rate={len(self._buff_queue[self._buff_queue.mid_index])}')
+                if self._buff_queue.is_full():
+                    mid_buff = self._buff_queue.peek(index=self._buff_queue.mid_index)
+                    logging.info(f'buff queue full with {self._buff_queue.max_entries} buffs, mid buff index='
+                                 f'{self._buff_queue.mid_index} '
+                                 f'with len={mid_buff.num_entries}')
 
                     # Check content of middle buffer.
-                    ###if len(self._buff_queue[self._mid_buff]) > self._buff_threshold:
-                    if len(self._buff_queue.peak(index=self._buff_queue.mid_index)) > self._buff_threshold:
-
-                        print('mid buff rate exceeded')
+                    mid_buff = self._buff_queue.peek(index=self._buff_queue.mid_index)
+                    if mid_buff.num_entries > self._buff_threshold:
+                        logging.info(f'mid buff len={mid_buff.num_entries} exceeded threshold {self._buff_threshold}')
                         if self._save_results:
-                            ###last_buff_saved_ms = self._buff_queue[-1][3]
-                            last_buff_saved_ms = self._buff_queue.peak(-1)[3]
-
+                            last_buff_saved_ms = self._buff_queue.peek(-1).buff[3]
                             n = 0
-                            for i in range(self._num_buffs):
-                                ###if self._buff_queue[i][3] <= last_buff_saved_ms:
-                                if self._buff_queue.peak(i)[3] <= last_buff_saved_ms:
+                            for i in range(self._buff_queue.num_entries):
+                                if self._buff_queue.peek(i).buff[3] <= last_buff_saved_ms:
                                     break
                                 else:
                                     n += 1
-                            print(f"overlap = {n}")
-                            # lines = [x for y in buff_queue for x in y]
+                            logging.info(f"overlap = {n}")
                             lines = []
-                            ###for i in range(n, self._num_buffs):
-                            for i in range(n, self._buf_queue.max_entries):
-                                ###lines += self._buff_queue[i]
-                                lines += self._buff_queue.peak(i)
+                            for i in range(n, self._buff_queue.max_entries):
+                                lines += self._buff_queue.peek(i).buff
 
                             self._event_file.writelines(lines)
                             self._event_file.flush()
+        self._acquisition_ended = True
+
+    def acquire_data(self) -> None:
+        t1 = threading.Thread(target=self._acquire_data)
+        t1.start()
 
     def _signal_handler(self, signal, frame):
         """
@@ -173,14 +166,14 @@ class DataCollector:
         we are currently blocking on com_port.readline()
 
         """
-        print('ctrl-c detected')
+        logging.info('ctrl-c detected')
 
         if self._event_file is not None:
             self._event_file.close()
-            print("File closed")
+            logging.info("File closed")
         if self._com_port is not None:
             self._com_port.close()
-            print("Com port closed")
+            logging.info("Com port closed")
         sys.exit(1)
     
 
