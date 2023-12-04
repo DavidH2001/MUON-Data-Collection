@@ -12,11 +12,16 @@ from time import sleep
 import tempfile
 import numpy as np
 import pandas as pd
+from buff_queue import BuffQueue
 from data_collector import DataCollector
 from unittest.mock import Mock
 
 
 class DataCollectorTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        pass
 
     def test_data_collector(self):
         """This test """
@@ -78,3 +83,38 @@ class DataCollectorTest(unittest.TestCase):
                 self.assertTrue(os.stat(data_file).st_size > 0)
                 #saved_data = pd.read_csv(data_file, sep=' ', header=None)
                 a=1
+
+    def test_data_collector_csv(self):
+
+        # Get and prepare test data from CSV file.
+        data = pd.read_csv("./data/event_test_set.csv", dtype={0: str, 1: str}, header=None).iloc[:, 0:2]
+        data = [f"{row[0]} {row[1]}".encode() for _, row in data.iterrows()]
+        data.append(b'exit')
+
+        # Mock the data collector com_port returned by serial package. The above data will be returned
+        # when reading lines.
+        # create new mock object
+        mock_com_port = Mock()
+        mock_com_port.readline.side_effect = data
+        DataCollector.com_port = mock_com_port
+
+        # mock the data collector serial package and attached mocked com port
+        mock_serial = Mock()
+        DataCollector.serial = mock_serial
+        mock_serial.Serial.return_value = mock_com_port
+
+        data_file = 'c:/Users/dave/Temp/test.txt'
+        if os.path.isfile(data_file):
+            os.remove(data_file)
+
+        buff_queue = BuffQueue(max_entries=6)
+
+        if True:  # with tempfile.TemporaryFile() as data_file:
+            with DataCollector(mock_com_port, data_file, buff_time_ms=100000, save_results=True) as data_collector:
+                # Middle data buffer only contained 7 events so file should be empty.
+                data_collector.acquire_data()
+                while not data_collector.acquisition_ended:
+                    sleep(0.01)
+                self.assertTrue(os.stat(data_file).st_size == 0)
+
+

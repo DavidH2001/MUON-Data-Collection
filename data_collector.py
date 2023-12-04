@@ -31,7 +31,7 @@ class DataCollector:
         :param com_port:
         :param event_file_name:
         :param kwargs:
-               num_buffs: The maximum number of buffers to be held by the queue.
+               buff_queue: Buffer queue.
                buff_threshold: Max event buffer trigger threshold.
                buff_time_ms: The time span of a single buffer in milliseconds.
                save_results: ??? do we need this ???
@@ -47,9 +47,10 @@ class DataCollector:
         self._start_time_ms: int = None
         self._last_buff_saved_ms = None
         self._buff = TextBuff()
-        self._buff_queue = BuffQueue()
+        self._buff_queue = kwargs.get("buff_queue", BuffQueue())
         self._event_file = None
         self._acquisition_ended = True
+        self._buff_count = 0
         if self._save_results:
             self._event_file = open(self._event_file_name, "w")
 
@@ -100,6 +101,7 @@ class DataCollector:
                 logging.info("EXIT!!!")
                 break
             data = codecs.decode(data, 'UTF-8')
+            # Add date and time to event data.
             data = str(datetime.now()) + " " + data
             logging.info(data)
             arduino_time = int(data.split()[3])
@@ -117,8 +119,9 @@ class DataCollector:
                 self._buff.append(data)
             else:
                 # Outside of buffer time period.
-                logging.info(f'buff time {self._buff_time_ms} exceeded, added buff (len={self._buff.num_entries}) to '
-                             f'queue at index {self._buff_queue.num_entries}')
+                self._buff_count += 1
+                logging.info(f'buff #{self._buff_count} time {self._buff_time_ms} exceeded, added buff '
+                             f'(len={self._buff.num_entries}) to queue at index {self._buff_queue.num_entries}')
 
                 # Add current buffer to queue.
                 self._buff_queue.append(copy.deepcopy(self._buff))
