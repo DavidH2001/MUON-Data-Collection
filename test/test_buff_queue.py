@@ -1,4 +1,6 @@
+import os
 import unittest
+import tempfile
 from text_buff import TextBuff
 from buff_queue import BuffQueue
 
@@ -43,6 +45,23 @@ class TextBuffTest(unittest.TestCase):
         mid_buff = buff_queue.peek(index=buff_queue.mid_index)
         self.assertEqual(mid_buff.buff, ["a", "bb", "ccc", "dddd"])
         self.assertTrue(mid_buff.num_entries == 4)
+
+    def test_save(self):
+        """Test buffer queue save."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            buff_queue = BuffQueue(max_entries=3, save_dir=temp_dir)
+            buff = TextBuff()
+            buff.append("abc")
+            buff.append("def")
+            buff_queue.append(buff)
+            buff = TextBuff()
+            buff.append("123")
+            buff.append("4567")
+            buff.append("891011")
+            buff_queue.append(buff)
+            temp_file = 'q.txt'
+            buff_queue.save(temp_file)
+            self.assertTrue(os.path.isfile(os.path.join(temp_dir, temp_file)))
 
 
 

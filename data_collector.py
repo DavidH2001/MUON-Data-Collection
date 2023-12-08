@@ -53,6 +53,7 @@ class DataCollector:
         self._buff_count = 0
         if self._save_results:
             self._event_file = open(self._event_file_name, "w")
+        self.previous_arduino_time = 0
 
         signal.signal(signal.SIGINT, self._signal_handler)
 
@@ -104,7 +105,10 @@ class DataCollector:
             # Add date and time to event data.
             data = str(datetime.now()) + " " + data
             logging.info(data)
+
             arduino_time = int(data.split()[3])
+            if arduino_time < self.previous_arduino_time:
+                logging.error(f'invalid arduino time {self._start_time_ms}')
 
             if self._start_time_ms is None:
                 # First time round so set start time to arduino ms time.
@@ -143,20 +147,28 @@ class DataCollector:
                     if mid_buff.num_entries > self._buff_threshold:
                         logging.info(f'mid buff len={mid_buff.num_entries} exceeded threshold {self._buff_threshold}')
                         if self._save_results:
-                            last_buff_saved_ms = self._buff_queue.peek(-1).buff[3]
-                            n = 0
-                            for i in range(self._buff_queue.num_entries):
-                                if self._buff_queue.peek(i).buff[3] <= last_buff_saved_ms:
-                                    break
-                                else:
-                                    n += 1
-                            logging.info(f"overlap = {n}")
-                            lines = []
-                            for i in range(n, self._buff_queue.max_entries):
-                                lines += self._buff_queue.peek(i).buff
+                            #print(self._buff_queue.peek(-1).buff[-1].split()[-1])
+                            first_buff_data_time = (f"{self._buff_queue.peek(-1).buff[-1].split()[0]}-"
+                                                    f"{self._buff_queue.peek(-1).buff[-1].split()[1]}")
+                            logging.info(f'first buff saved date time = {first_buff_data_time}')
+                            last_buff_saved_ms = self._buff_queue.peek(-1).buff[-1].split()[-1]
+                            logging.info(f'last buff saved arduino time = {last_buff_saved_ms}')
+                            self._buff_queue.save()
 
-                            self._event_file.writelines(lines)
-                            self._event_file.flush()
+                            # n = 0
+                            # for i in range(self._buff_queue.num_entries):
+                            #     if self._buff_queue.peek(i).buff[3] <= last_buff_saved_ms:
+                            #         break
+                            #     else:
+                            #         n += 1
+                            # logging.info(f"overlap = {n}")
+
+                            # lines = []
+                            # for i in range(n, self._buff_queue.max_entries):
+                            #     lines += self._buff_queue.peek(i).buff
+                            #
+                            # self._event_file.writelines(lines)
+                            # self._event_file.flush()
         self._acquisition_ended = True
 
     def acquire_data(self) -> None:

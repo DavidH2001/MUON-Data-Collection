@@ -1,10 +1,12 @@
 
 import collections
+import os.path
 
 
 class BuffQueue:
 
     def __init__(self, **kwargs):
+        self._save_dir = kwargs.get("save_dir", ".")
         self._max_entries = kwargs.get('max_entries', 5)
         self._queue: collections.deque = collections.deque(maxlen=self._max_entries)
         self._mid_index: int = int(self._max_entries / 2)
@@ -29,5 +31,12 @@ class BuffQueue:
 
     def is_full(self):
         return self.num_entries >= self.max_entries
+
+    def save(self, file_name: str):
+        file_path = os.path.join(self._save_dir, file_name)
+        with open(file_path, "w+") as file:
+            for buff in self._queue:
+                file.writelines(buff.buff)
+
 
 
