@@ -7,7 +7,7 @@ Created on Mon Jul 18 16:26:17 2022
 
 Detetcor will automatically reset when this program connects with it.  
 """
-
+import os.path
 import sys
 import signal
 import threading
@@ -24,12 +24,12 @@ class DataCollector:
     """Data collector object class."""
     def __init__(self,
                  com_port: str,
-                 event_file_name: str = None,
+                 save_dir: str = None,
                  **kwargs):
         """
         Constructor.
         :param com_port:
-        :param event_file_name:
+        :param save_dir:
         :param kwargs:
                buff_queue: Buffer queue.
                buff_threshold: Max event buffer trigger threshold.
@@ -39,7 +39,9 @@ class DataCollector:
         logging.basicConfig(encoding='utf-8', level=logging.INFO)
 
         self._com_port = com_port
-        self._event_file_name: str = event_file_name
+        if not os.path.exists(save_dir):
+            raise NotADirectoryError(f"The specified save directory {save_dir} does not exist.")
+        self._save_dir: str = save_dir
         self._buff_threshold: int = kwargs.get('buff_threshold', 7)
         self._buff_time_ms: int = kwargs.get('buff_time_ms', 60000)
         self._trigger_string: bool = kwargs.get('trigger_string', '')
@@ -47,12 +49,12 @@ class DataCollector:
         self._start_time_ms: int = None
         self._last_buff_saved_ms = None
         self._buff = TextBuff()
-        self._buff_queue = kwargs.get("buff_queue", BuffQueue())
+        self._buff_queue = kwargs.get("buff_queue", BuffQueue(save_dir=save_dir))
         self._event_file = None
         self._acquisition_ended = True
         self._buff_count = 0
-        if self._save_results:
-            self._event_file = open(self._event_file_name, "w")
+        #if self._save_results:
+        #    self._event_file = open(self._event_file_name, "w")
         self.previous_arduino_time = 0
 
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -71,8 +73,9 @@ class DataCollector:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self._save_results:
-            self._event_file.close()
+        #if self._save_results:
+        #    self._event_file.close()
+        pass
 
     @property
     def acquisition_ended(self):
@@ -103,10 +106,11 @@ class DataCollector:
                 break
             data = codecs.decode(data, 'UTF-8')
             # Add date and time to event data.
-            data = str(datetime.now()) + " " + data
+            date_time_now = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+            data = str(date_time_now) + " " + data
             logging.info(data)
 
-            arduino_time = int(data.split()[3])
+            arduino_time = int(data.split()[2])
             if arduino_time < self.previous_arduino_time:
                 logging.error(f'invalid arduino time {self._start_time_ms}')
 
@@ -148,12 +152,15 @@ class DataCollector:
                         logging.info(f'mid buff len={mid_buff.num_entries} exceeded threshold {self._buff_threshold}')
                         if self._save_results:
                             #print(self._buff_queue.peek(-1).buff[-1].split()[-1])
-                            first_buff_data_time = (f"{self._buff_queue.peek(-1).buff[-1].split()[0]}-"
-                                                    f"{self._buff_queue.peek(-1).buff[-1].split()[1]}")
-                            logging.info(f'first buff saved date time = {first_buff_data_time}')
+                            # first_buff_data_time = (f"{self._buff_queue.peek(-1).buff[-1].split()[0]}-"
+                            #                         f"{self._buff_queue.peek(-1).buff[-1].split()[1]}")
+                            # logging.info(f'first buff saved date time = {first_buff_data_time}')
                             last_buff_saved_ms = self._buff_queue.peek(-1).buff[-1].split()[-1]
                             logging.info(f'last buff saved arduino time = {last_buff_saved_ms}')
-                            self._buff_queue.save()
+                            first_buff_data_time = f"{self._buff_queue.peek(0).buff[0]}.txt"
+                            logging.info(f'first buff saved date time = {first_buff_data_time}')
+
+                            self._buff_queue.save(file_name=first_buff_data_time)
 
                             # n = 0
                             # for i in range(self._buff_queue.num_entries):

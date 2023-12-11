@@ -36,7 +36,8 @@ class BuffQueue:
         file_path = os.path.join(self._save_dir, file_name)
         with open(file_path, "w+") as file:
             for buff in self._queue:
-                file.writelines(buff.buff)
+                for line in buff.buff:
+                    file.write(line + '\n')
 
 
 
