@@ -31,7 +31,7 @@ class DataCollector:
         :param com_port:
         :param save_dir:
         :param kwargs:
-               buff_queue: Buffer queue.
+               buff_queue: Buffer queue. Will create own if not defined.
                buff_threshold: Max event buffer trigger threshold.
                buff_time_ms: The time span of a single buffer in milliseconds.
                save_results: ??? do we need this ???
@@ -53,8 +53,6 @@ class DataCollector:
         self._event_file = None
         self._acquisition_ended = True
         self._buff_count = 0
-        #if self._save_results:
-        #    self._event_file = open(self._event_file_name, "w")
         self.previous_arduino_time = 0
 
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -90,12 +88,37 @@ class DataCollector:
             if name in str(line):
                 break
 
+    def _process_middle_buffer(self):
+
+        mid_buff = self._buff_queue.peek(index=self._buff_queue.mid_index)
+        if mid_buff.num_entries > self._buff_threshold:
+            logging.info(f'mid buff len={mid_buff.num_entries} exceeded threshold {self._buff_threshold}')
+
+            # if self._ignore_buff_count > 0:
+            #     logging.info('still within last saved buffer range so ignoring ')
+            #     self._ignore_buff_count -= 1
+
+            if self._save_results:
+                # print(self._buff_queue.peek(-1).buff[-1].split()[-1])
+                # first_buff_data_time = (f"{self._buff_queue.peek(-1).buff[-1].split()[0]}-"
+                #                         f"{self._buff_queue.peek(-1).buff[-1].split()[1]}")
+                # logging.info(f'first buff saved date time = {first_buff_data_time}')
+                last_buff_saved_ms = self._buff_queue.peek(-1).buff[-1].split()[-1]
+                logging.info(f'last buff saved arduino time = {last_buff_saved_ms}')
+                name = self._buff_queue.peek(0).buff[0].split()[0]
+                first_buff_data_time = f"{name}.txt"
+                logging.info(f'first buff saved date time = {first_buff_data_time}')
+                self._buff_queue.save(file_name=first_buff_data_time)
+                #self._ignore_buff_count = self._buff_queue.mid_index
+
+
     def _acquire_data(self) -> None:
         """
         Main data acquisition function used to sink the data from the serial port and hold it in a queue of buffers.
         Each buffer can hold a number of events that arrive within the specified time period. When the buffer queue is
         full the middle buffer is checked against the max number of events trigger threshold. This is then repeated for
-        every subsequent buffer received.
+        every subsequent buffer received. When a middle buffer exceeds the trigger threshold then the entire contents
+        of the buffer queue are saved.
         """
         self._acquisition_ended = False
         while True:
@@ -106,7 +129,7 @@ class DataCollector:
                 break
             data = codecs.decode(data, 'UTF-8')
             # Add date and time to event data.
-            date_time_now = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+            date_time_now = datetime.now().strftime("%Y%m%d-%H%M%S.%f")[:-3]
             data = str(date_time_now) + " " + data
             logging.info(data)
 
@@ -145,37 +168,25 @@ class DataCollector:
                     logging.info(f'buff queue full with {self._buff_queue.max_entries} buffs, mid buff index='
                                  f'{self._buff_queue.mid_index} '
                                  f'with len={mid_buff.num_entries}')
+                    self._process_middle_buffer()
+                    # # Check content of middle buffer.
+                    # mid_buff = self._buff_queue.peek(index=self._buff_queue.mid_index)
+                    # if mid_buff.num_entries > self._buff_threshold:
+                    #     logging.info(f'mid buff len={mid_buff.num_entries} exceeded threshold {self._buff_threshold}')
+                    #     if self._save_results:
+                    #         #print(self._buff_queue.peek(-1).buff[-1].split()[-1])
+                    #         # first_buff_data_time = (f"{self._buff_queue.peek(-1).buff[-1].split()[0]}-"
+                    #         #                         f"{self._buff_queue.peek(-1).buff[-1].split()[1]}")
+                    #         # logging.info(f'first buff saved date time = {first_buff_data_time}')
+                    #         last_buff_saved_ms = self._buff_queue.peek(-1).buff[-1].split()[-1]
+                    #         logging.info(f'last buff saved arduino time = {last_buff_saved_ms}')
+                    #         name = self._buff_queue.peek(0).buff[0].split()[0]
+                    #         first_buff_data_time = f"{name}.txt"
+                    #         logging.info(f'first buff saved date time = {first_buff_data_time}')
+                    #
+                    #         self._buff_queue.save(file_name=first_buff_data_time)
+                    #         self._last_buff_saved = self._buff_count
 
-                    # Check content of middle buffer.
-                    mid_buff = self._buff_queue.peek(index=self._buff_queue.mid_index)
-                    if mid_buff.num_entries > self._buff_threshold:
-                        logging.info(f'mid buff len={mid_buff.num_entries} exceeded threshold {self._buff_threshold}')
-                        if self._save_results:
-                            #print(self._buff_queue.peek(-1).buff[-1].split()[-1])
-                            # first_buff_data_time = (f"{self._buff_queue.peek(-1).buff[-1].split()[0]}-"
-                            #                         f"{self._buff_queue.peek(-1).buff[-1].split()[1]}")
-                            # logging.info(f'first buff saved date time = {first_buff_data_time}')
-                            last_buff_saved_ms = self._buff_queue.peek(-1).buff[-1].split()[-1]
-                            logging.info(f'last buff saved arduino time = {last_buff_saved_ms}')
-                            first_buff_data_time = f"{self._buff_queue.peek(0).buff[0]}.txt"
-                            logging.info(f'first buff saved date time = {first_buff_data_time}')
-
-                            self._buff_queue.save(file_name=first_buff_data_time)
-
-                            # n = 0
-                            # for i in range(self._buff_queue.num_entries):
-                            #     if self._buff_queue.peek(i).buff[3] <= last_buff_saved_ms:
-                            #         break
-                            #     else:
-                            #         n += 1
-                            # logging.info(f"overlap = {n}")
-
-                            # lines = []
-                            # for i in range(n, self._buff_queue.max_entries):
-                            #     lines += self._buff_queue.peek(i).buff
-                            #
-                            # self._event_file.writelines(lines)
-                            # self._event_file.flush()
         self._acquisition_ended = True
 
     def acquire_data(self) -> None:

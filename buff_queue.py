@@ -4,6 +4,7 @@ import os.path
 
 
 class BuffQueue:
+    """Buffer queue class."""
 
     def __init__(self, **kwargs):
         self._save_dir = kwargs.get("save_dir", ".")
@@ -33,6 +34,11 @@ class BuffQueue:
         return self.num_entries >= self.max_entries
 
     def save(self, file_name: str):
+        """
+        Save current content of queued buffers in a single file.
+        :param file_name: Name of file used to save buffer data.
+        :return:
+        """
         file_path = os.path.join(self._save_dir, file_name)
         with open(file_path, "w+") as file:
             for buff in self._queue:
