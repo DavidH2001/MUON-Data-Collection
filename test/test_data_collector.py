@@ -5,14 +5,11 @@ Created on Fri Jul 29 14:01:33 2022
 
 @author: dave
 """
-
-import time
+import os
 import unittest
 from time import sleep
 import tempfile
-import numpy as np
 import pandas as pd
-from buff_queue import BuffQueue
 from data_collector import DataCollector
 from unittest.mock import Mock
 
@@ -58,7 +55,7 @@ class DataCollectorTest(unittest.TestCase):
         # if os.path.isfile(data_file):
         #     os.remove(data_file)
 
-        if True:  # with tempfile.TemporaryDir() as data_dir:
+        if True:  # with tempfile.TemporaryDir() as temp_dir:
             with DataCollector(mock_com_port,
                                save_dir=temp_dir,
                                buff_time_ms=100000,
@@ -67,6 +64,22 @@ class DataCollectorTest(unittest.TestCase):
                 data_collector.acquire_data()
                 while not data_collector.acquisition_ended:
                     sleep(0.01)
+
+                a=1
+                files = [f for f in os.listdir(temp_dir)] # if os.path.isfile(os.path.join(temp_dir, f))]
+
+                self.assertTrue(len(files) == 3)
+                df = pd.read_csv(os.path.join(temp_dir, files[0]), sep=' ', header=None)
+                self.assertTrue(df.iloc[0, 1] == 10)
+                self.assertTrue(df.iloc[-1, 1] == 34)
+                df = pd.read_csv(os.path.join(temp_dir, files[1]), sep=' ', header=None)
+                self.assertTrue(df.iloc[0, 1] == 29)
+                self.assertTrue(df.iloc[-1, 1] == 56)
+                df = pd.read_csv(os.path.join(temp_dir, files[2]), sep=' ', header=None)
+                self.assertTrue(df.iloc[0, 1] == 30)
+                self.assertTrue(df.iloc[-1, 1] == 60)
+                a=1
+
                 #self.assertTrue(os.stat(data_file).st_size == 0)
                 # self assert have 3 files
 

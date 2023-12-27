@@ -51,7 +51,7 @@ class DataCollector:
         self._buff = TextBuff()
         self._buff_queue = kwargs.get("buff_queue", BuffQueue(save_dir=save_dir))
         self._event_file = None
-        self._acquisition_ended = True
+        self._acquisition_ended = False
         self._buff_count = 0
         self.previous_arduino_time = 0
 
@@ -169,23 +169,6 @@ class DataCollector:
                                  f'{self._buff_queue.mid_index} '
                                  f'with len={mid_buff.num_entries}')
                     self._process_middle_buffer()
-                    # # Check content of middle buffer.
-                    # mid_buff = self._buff_queue.peek(index=self._buff_queue.mid_index)
-                    # if mid_buff.num_entries > self._buff_threshold:
-                    #     logging.info(f'mid buff len={mid_buff.num_entries} exceeded threshold {self._buff_threshold}')
-                    #     if self._save_results:
-                    #         #print(self._buff_queue.peek(-1).buff[-1].split()[-1])
-                    #         # first_buff_data_time = (f"{self._buff_queue.peek(-1).buff[-1].split()[0]}-"
-                    #         #                         f"{self._buff_queue.peek(-1).buff[-1].split()[1]}")
-                    #         # logging.info(f'first buff saved date time = {first_buff_data_time}')
-                    #         last_buff_saved_ms = self._buff_queue.peek(-1).buff[-1].split()[-1]
-                    #         logging.info(f'last buff saved arduino time = {last_buff_saved_ms}')
-                    #         name = self._buff_queue.peek(0).buff[0].split()[0]
-                    #         first_buff_data_time = f"{name}.txt"
-                    #         logging.info(f'first buff saved date time = {first_buff_data_time}')
-                    #
-                    #         self._buff_queue.save(file_name=first_buff_data_time)
-                    #         self._last_buff_saved = self._buff_count
 
         self._acquisition_ended = True
 
