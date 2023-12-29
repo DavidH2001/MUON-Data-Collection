@@ -25,8 +25,8 @@ class DataCollectorTest(unittest.TestCase):
         data_index = 0
 
         # Get and prepare test data from CSV file.
-        data = pd.read_csv("./data/event_test_set.csv", dtype={0: str, 1: str}, header=None).iloc[:, 0:2]
-        data = [f"{row[0]} {row[1]}".encode() for _, row in data.iterrows()]
+        data = pd.read_csv("./data/event_test_set.csv", dtype={0: str, 1: str}).iloc[:, 0:6]
+        data = [f"{row[0]} {row[1]} {row[2]} {row[3]} {row[4]} {row[5]}".encode() for _, row in data.iterrows()]
         data.append(b'exit')
 
         def _data_func():
@@ -59,7 +59,8 @@ class DataCollectorTest(unittest.TestCase):
             with DataCollector(mock_com_port,
                                save_dir=temp_dir,
                                buff_time_ms=100000,
-                               save_results=True) as data_collector:
+                               save_results=True,
+                               use_arduino_time=True) as data_collector:
                 # Middle data buffer only contained 7 events so file should be empty.
                 data_collector.acquire_data()
                 while not data_collector.acquisition_ended:

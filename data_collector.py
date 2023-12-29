@@ -15,7 +15,7 @@ import time
 import logging
 import codecs
 import copy
-from datetime import datetime
+from datetime import datetime, timezone
 from text_buff import TextBuff
 from buff_queue import BuffQueue
 
@@ -35,6 +35,7 @@ class DataCollector:
                buff_threshold: Max event buffer trigger threshold.
                buff_time_ms: The time span of a single buffer in milliseconds.
                save_results: ??? do we need this ???
+               use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
         """
         logging.basicConfig(encoding='utf-8', level=logging.INFO)
 
@@ -46,7 +47,8 @@ class DataCollector:
         self._buff_time_ms: int = kwargs.get('buff_time_ms', 60000)
         self._trigger_string: bool = kwargs.get('trigger_string', '')
         self._save_results: bool = kwargs.get('save_results', True)
-        self._start_time_ms: int = None
+        self._use_arduino_time: bool = kwargs.get('use_arduino_time', False)
+        self._start_time: (datetime, int) = None
         self._last_buff_saved_ms = None
         self._buff = TextBuff()
         self._buff_queue = kwargs.get("buff_queue", BuffQueue(save_dir=save_dir))
@@ -129,23 +131,30 @@ class DataCollector:
                 break
             data = codecs.decode(data, 'UTF-8')
             # Add date and time to event data.
-            date_time_now = datetime.now().strftime("%Y%m%d-%H%M%S.%f")[:-3]
+            date_time_now = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S.%f")[:-3]
             data = str(date_time_now) + " " + data
             logging.info(data)
 
-            arduino_time = int(data.split()[2])
-            if arduino_time < self.previous_arduino_time:
-                logging.error(f'invalid arduino time {self._start_time_ms}')
+            split_data = data.split()
+            arduino_time = int(split_data[2])
+            dead_time = int(split_data[5])
 
-            if self._start_time_ms is None:
-                # First time round so set start time to arduino ms time.
-                self._start_time_ms = arduino_time
-                logging.info(f'start_time_ms = {self._start_time_ms}')
+            if self._start_time is None:
+                # First time round so set start time.
+                if self._use_arduino_time:
+                    self._start_time = arduino_time
+                else:
+                    self._start_time = date_time_now
+                logging.info(f'start_time = {self._start_time}')
 
-            logging.info(f'elapsed time = {arduino_time - self._start_time_ms}')
+            if self._use_arduino_time:
+                elapsed_time_ms = arduino_time - self._start_time
+            else:
+                elapsed_time_ms = int((date_time_now - self._start_time).total_seconds() * 1000)
+            logging.info(f'elapsed time (ms) = {elapsed_time_ms}')
 
             # Fill buffer with event data.
-            if arduino_time - self._start_time_ms < self._buff_time_ms:
+            if elapsed_time_ms < self._buff_time_ms:
                 # Still within current buffer time period.
                 self._buff.append(data)
             else:
