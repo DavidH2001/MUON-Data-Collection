@@ -131,17 +131,16 @@ class DataCollector:
                 break
             data = codecs.decode(data, 'UTF-8')
             # Add date and time to event data.
-            date_time_now = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S.%f")[:-3]
-            data = str(date_time_now) + " " + data
-            logging.info(data)
 
-            split_data = data.split()
-            arduino_time = int(split_data[2])
-            dead_time = int(split_data[5])
+            date_time_now = datetime.now(timezone.utc)
+            data = date_time_now.strftime("%Y%m%d-%H%M%S.%f")[:-3] + " " + data
+            logging.info(data)
 
             if self._start_time is None:
                 # First time round so set start time.
                 if self._use_arduino_time:
+                    split_data = data.split()
+                    arduino_time = int(split_data[2])
                     self._start_time = arduino_time
                 else:
                     self._start_time = date_time_now
@@ -168,8 +167,12 @@ class DataCollector:
                 # Add new data to new buffer.
                 self._buff.append(data, reset=True)
 
-                self._start_time_ms = arduino_time
-                logging.info(f'start_ms = {self._start_time_ms}')
+                if self._use_arduino_time:
+                    self._start_time = arduino_time
+                else:
+                    self._start_time = date_time_now
+
+                logging.info(f'start_ms = {self._start_time}')
 
                 # Check where we are in the buffer queue.
                 if self._buff_queue.is_full():

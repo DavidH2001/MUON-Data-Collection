@@ -23,6 +23,8 @@ class DataCollectorTest(unittest.TestCase):
     def test_data_collector_csv(self):
 
         data_index = 0
+        use_arduino_time = False
+        previous_arduino_time = 0
 
         # Get and prepare test data from CSV file.
         data = pd.read_csv("./data/event_test_set.csv", dtype={0: str, 1: str}).iloc[:, 0:6]
@@ -32,8 +34,21 @@ class DataCollectorTest(unittest.TestCase):
         def _data_func():
             """Function used to emulate a delay and pass serial data"""
             nonlocal data_index
+            nonlocal previous_arduino_time
             result = data[data_index]
-            sleep(0.1)
+            if use_arduino_time:
+                sleep(0.1)
+            else:
+                # Sleep off the difference between previous and current arduino times so as PC clock will
+                # approximate the time difference.
+                result_split = result.split()
+                if result_split[0] != b'exit':
+                    arduino_time = int(result_split[1])
+                    arduino_elapsed_time = arduino_time - previous_arduino_time
+                    print(arduino_elapsed_time)
+                    sleep(arduino_elapsed_time / 1000)
+                    previous_arduino_time = arduino_time
+
             data_index += 1
             return result
 
@@ -58,9 +73,9 @@ class DataCollectorTest(unittest.TestCase):
         if True:  # with tempfile.TemporaryDir() as temp_dir:
             with DataCollector(mock_com_port,
                                save_dir=temp_dir,
-                               buff_time_ms=100000,
+                               buff_time_ms=1000,
                                save_results=True,
-                               use_arduino_time=True) as data_collector:
+                               use_arduino_time=use_arduino_time) as data_collector:
                 # Middle data buffer only contained 7 events so file should be empty.
                 data_collector.acquire_data()
                 while not data_collector.acquisition_ended:
