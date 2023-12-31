@@ -45,7 +45,6 @@ class DataCollectorTest(unittest.TestCase):
                 if result_split[0] != b'exit':
                     arduino_time = int(result_split[1])
                     arduino_elapsed_time = arduino_time - previous_arduino_time
-                    print(arduino_elapsed_time)
                     sleep(arduino_elapsed_time / 1000)
                     previous_arduino_time = arduino_time
 
@@ -89,10 +88,10 @@ class DataCollectorTest(unittest.TestCase):
                 self.assertTrue(df.iloc[0, 1] == 10)
                 self.assertTrue(df.iloc[-1, 1] == 34)
                 df = pd.read_csv(os.path.join(temp_dir, files[1]), sep=' ', header=None)
-                self.assertTrue(df.iloc[0, 1] == 29)
+                self.assertTrue(df.iloc[0, 1] == 35)
                 self.assertTrue(df.iloc[-1, 1] == 56)
                 df = pd.read_csv(os.path.join(temp_dir, files[2]), sep=' ', header=None)
-                self.assertTrue(df.iloc[0, 1] == 30)
+                self.assertTrue(df.iloc[0, 1] == 57)
                 self.assertTrue(df.iloc[-1, 1] == 60)
                 a=1
 

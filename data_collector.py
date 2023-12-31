@@ -55,7 +55,8 @@ class DataCollector:
         self._event_file = None
         self._acquisition_ended = False
         self._buff_count = 0
-        self.previous_arduino_time = 0
+        self._previous_arduino_time = 0
+        self._last_buff_count_saved = 0
 
         signal.signal(signal.SIGINT, self._signal_handler)
 
@@ -108,11 +109,16 @@ class DataCollector:
                 last_buff_saved_ms = self._buff_queue.peek(-1).buff[-1].split()[-1]
                 logging.info(f'last buff saved arduino time = {last_buff_saved_ms}')
                 name = self._buff_queue.peek(0).buff[0].split()[0]
-                first_buff_data_time = f"{name}.txt"
-                logging.info(f'first buff saved date time = {first_buff_data_time}')
-                self._buff_queue.save(file_name=first_buff_data_time)
-                #self._ignore_buff_count = self._buff_queue.mid_index
+                name = f"{name}.txt"
 
+                if self._buff_count - self._last_buff_count_saved >= self._buff_queue.num_entries:
+                    index_from = 0
+                else:
+                    index_from = self._buff_queue.num_entries - (self._buff_count - self._last_buff_count_saved)
+                logging.info(f'Saving file {name} index_from={index_from}')
+
+                self._buff_queue.save(file_name=name, index_from=index_from)
+                self._last_buff_count_saved = self._buff_count
 
     def _acquire_data(self) -> None:
         """

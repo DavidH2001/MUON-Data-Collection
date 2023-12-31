@@ -52,6 +52,7 @@ class TextBuffTest(unittest.TestCase):
         temp_dir = "c:/users/dave/temp"
         #with tempfile.TemporaryDirectory() as temp_dir:
         if True:
+            # test standard save
             buff_queue = BuffQueue(max_entries=3, save_dir=temp_dir)
             buff = TextBuff()
             buff.append("111 abc")
@@ -71,7 +72,21 @@ class TextBuffTest(unittest.TestCase):
             self.assertTrue(df.loc[0, 1] == 'abc')
             self.assertTrue(df.loc[4, 0] == 555)
             self.assertTrue(df.loc[4, 1] == 'nop')
-
+            # test save index_from argument
+            buff = TextBuff()
+            buff.append("666 xxx")
+            buff.append("777 yyy")
+            buff.append("888 zzz")
+            buff_queue.append(buff)
+            temp_file = 'q2.txt'
+            buff_queue.save(temp_file, index_from=1)
+            self.assertTrue(os.path.isfile(os.path.join(temp_dir, temp_file)))
+            df = pd.read_csv(os.path.join(temp_dir, temp_file), sep=' ', header=None)
+            self.assertTrue(len(df) == 6)
+            self.assertTrue(df.loc[0, 0] == 333)
+            self.assertTrue(df.loc[0, 1] == 'hij')
+            self.assertTrue(df.loc[5, 0] == 888)
+            self.assertTrue(df.loc[5, 1] == 'zzz')
 
 
 

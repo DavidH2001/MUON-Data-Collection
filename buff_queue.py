@@ -33,16 +33,19 @@ class BuffQueue:
     def is_full(self):
         return self.num_entries >= self.max_entries
 
-    def save(self, file_name: str):
+    def save(self, file_name: str, index_from: int = 0):
         """
         Save current content of queued buffers in a single file.
         :param file_name: Name of file used to save buffer data.
+        :param index_from: Starting buffer index.
         :return:
         """
         file_path = os.path.join(self._save_dir, file_name)
         with open(file_path, "w+") as file:
-            for buff in self._queue:
-                for line in buff.buff:
+            for i in range(index_from, self.num_entries):
+            #for buff in self._queue[index_from:]:
+                #for line in buff.buff:
+                for line in self._queue[i].buff:
                     file.write(line + '\n')
 
 
