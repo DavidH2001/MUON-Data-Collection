@@ -16,6 +16,9 @@ import logging
 import codecs
 import copy
 from datetime import datetime, timezone
+
+import numpy as np
+
 from text_buff import TextBuff
 from buff_queue import BuffQueue
 
@@ -55,8 +58,11 @@ class DataCollector:
         self._event_file = None
         self._acquisition_ended = False
         self._buff_count = 0
+        self._event_count = 0
         self._previous_arduino_time = 0
         self._last_buff_count_saved = 0
+        self._event_freq_history = np.zeros(self._buff_queue.max_entries)
+        self._median_frequency = None
 
         signal.signal(signal.SIGINT, self._signal_handler)
 
@@ -102,10 +108,6 @@ class DataCollector:
             #     self._ignore_buff_count -= 1
 
             if self._save_results:
-                # print(self._buff_queue.peek(-1).buff[-1].split()[-1])
-                # first_buff_data_time = (f"{self._buff_queue.peek(-1).buff[-1].split()[0]}-"
-                #                         f"{self._buff_queue.peek(-1).buff[-1].split()[1]}")
-                # logging.info(f'first buff saved date time = {first_buff_data_time}')
                 last_buff_saved_ms = self._buff_queue.peek(-1).buff[-1].split()[-1]
                 logging.info(f'last buff saved arduino time = {last_buff_saved_ms}')
                 name = self._buff_queue.peek(0).buff[0].split()[0]
@@ -119,6 +121,8 @@ class DataCollector:
 
                 self._buff_queue.save(file_name=name, index_from=index_from)
                 self._last_buff_count_saved = self._buff_count
+
+
 
     def _acquire_data(self) -> None:
         """
@@ -136,6 +140,7 @@ class DataCollector:
                 logging.info("EXIT!!!")
                 break
             data = codecs.decode(data, 'UTF-8')
+            self._event_count += 1
             # Add date and time to event data.
 
             date_time_now = datetime.now(timezone.utc)
@@ -164,8 +169,8 @@ class DataCollector:
                 self._buff.append(data)
             else:
                 # Outside of buffer time period.
-                self._buff_count += 1
-                logging.info(f'buff #{self._buff_count} time {self._buff_time_ms} exceeded, added buff '
+                #self._buff_count += 1
+                logging.info(f'buff #{self._buff_count + 1} time {self._buff_time_ms} exceeded, added buff '
                              f'(len={self._buff.num_entries}) to queue at index {self._buff_queue.num_entries}')
 
                 # Add current buffer to queue.
@@ -180,8 +185,21 @@ class DataCollector:
 
                 logging.info(f'start_ms = {self._start_time}')
 
+                # Update event frequency data.
+                self._event_freq_history[self._buff_count % self._buff_queue.max_entries] = (
+                        elapsed_time_ms / self._event_count)
+                self._event_count = 1
+                self._buff_count += 1
+
                 # Check where we are in the buffer queue.
                 if self._buff_queue.is_full():
+
+                    # Update median frequency
+                    self._median_frequency = np.median(self._event_freq_history)
+                    print(self._event_freq_history)
+                    print(self._median_frequency)
+
+                    # And now process the queue
                     mid_buff = self._buff_queue.peek(index=self._buff_queue.mid_index)
                     logging.info(f'buff queue full with {self._buff_queue.max_entries} buffs, mid buff index='
                                  f'{self._buff_queue.mid_index} '
