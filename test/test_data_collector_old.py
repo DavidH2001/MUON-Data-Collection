@@ -27,7 +27,7 @@ class DataCollectorTest(unittest.TestCase):
         previous_arduino_time = 0
 
         # Get and prepare test data from CSV file.
-        data = pd.read_csv("./data/event_test_set2.csv", dtype={0: str, 1: str}).iloc[:, 0:7]
+        data = pd.read_csv("./data/event_test_set.csv", dtype={0: str, 1: str}).iloc[:, 0:7]
         data = [f"{row[0]} {row[1]} {row[2]} {row[3]} {row[4]} {row[5]} {row[6]}".encode() for _, row in data.iterrows()]
         data.append(b'exit')
 
@@ -72,7 +72,7 @@ class DataCollectorTest(unittest.TestCase):
         if True:  # with tempfile.TemporaryDir() as temp_dir:
             with DataCollector(mock_com_port,
                                save_dir=temp_dir,
-                               buff_length=10,
+                               buff_time_ms=1000,
                                save_results=True,
                                use_arduino_time=use_arduino_time) as data_collector:
                 # Middle data buffer only contained 7 events so file should be empty.

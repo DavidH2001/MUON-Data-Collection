@@ -1,7 +1,7 @@
 import sys
 import glob
 import serial
-from data_collector import DataCollector
+from data_collector_old import DataCollector
 
 
 def serial_ports():
