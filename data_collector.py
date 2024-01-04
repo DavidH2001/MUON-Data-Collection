@@ -30,7 +30,8 @@ class DataCollector:
         :param com_port:
         :param save_dir:
         :param kwargs:
-               buff_length: The number of events to be held in the buffer.
+               buff_size: The number of events to be held in the buffer.
+               window_size: The number of events used by the anomaly window.
                save_results: ??? do we need this ???
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
         """
@@ -39,7 +40,11 @@ class DataCollector:
         self._com_port = com_port
         if not os.path.exists(save_dir):
             raise NotADirectoryError(f"The specified save directory {save_dir} does not exist.")
-        self._buff_length: int = kwargs.get('buff_length', 100)
+        self._buff_size: int = kwargs.get('buff_size', 100)
+        self._window_size: int = kwargs.get('window_size', 10)
+        if self._buff_size % self._window_size != 0:
+            raise ValueError("buff size is not a multiple of window size.")
+        self._window_frequency_list = []
 
         # self._save_dir: str = save_dir
         # self._buff_threshold: int = kwargs.get('buff_threshold', 7)
@@ -102,6 +107,15 @@ class DataCollector:
             if name in str(line):
                 break
 
+    def _update_frequency_history(self, cur_buff_index: int) -> None:
+        """Update the window event frequency history."""
+        window_data = self._buff.iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
+        a=1
+
+    def _check_for_anomaly(self) -> None:
+        """Check for event anomaly."""
+        pass
+
     def _acquire_data(self) -> None:
         """
         Main data acquisition function used to sink the data from the serial port and hold it in a queue of buffers.
@@ -111,7 +125,7 @@ class DataCollector:
         of the buffer queue are saved.
         """
         self._acquisition_ended = False
-        cur_buff_index = 0
+        event_counter = 0
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
@@ -137,14 +151,20 @@ class DataCollector:
             data = data.split()
             data = [date_time_now.strftime("%Y%m%d %H%M%S.%f")[:-3]] + data
 
-            if len(self._buff) < self._buff_length:
+            if len(self._buff) < self._buff_size:
+                # fill buffer for first time
                 self._buff.loc[len(self._buff)] = data
+                event_counter += 1
             else:
-                self._buff.loc[cur_buff_index] = data
-                cur_buff_index += 1
-                if cur_buff_index == 10:
-                    cur_buff_index = 0
-                #cur_buff_index = cur_buff_index % self._buff_length # !?!?!?!
+                # repeat filling
+                #if not self._window_frequency_list:
+                #    self._update_window_frequency_list()
+                buff_index = event_counter % self._buff_size
+                self._buff.loc[buff_index] = data
+                event_counter += 1
+                if not event_counter % self._window_size:
+                    self._update_frequency_history(buff_index)
+
             logging.info(data)
 
 

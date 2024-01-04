@@ -20,6 +20,25 @@ class DataCollectorTest(unittest.TestCase):
     def setUpClass(cls):
         pass
 
+    def test_data_collector_params(self):
+        mock_com_port = Mock()
+
+        with self.assertRaises(NotADirectoryError) as context:
+            dir_name = "* not a directory *"
+            _ = DataCollector(mock_com_port,
+                              save_dir=dir_name,
+                              buff_size=10,
+                              window_size=2)
+        self.assertTrue(f"The specified save directory {dir_name} does not exist." in str(context.exception))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaises(ValueError) as context:
+                _ = DataCollector(mock_com_port,
+                                  save_dir=temp_dir,
+                                  buff_size=10,
+                                  window_size=3)
+            self.assertTrue("buff size is not a multiple of window size." in str(context.exception))
+
     def test_data_collector_csv(self):
 
         data_index = 0
@@ -72,7 +91,8 @@ class DataCollectorTest(unittest.TestCase):
         if True:  # with tempfile.TemporaryDir() as temp_dir:
             with DataCollector(mock_com_port,
                                save_dir=temp_dir,
-                               buff_length=10,
+                               buff_size=12,
+                               window_size=4,
                                save_results=True,
                                use_arduino_time=use_arduino_time) as data_collector:
                 # Middle data buffer only contained 7 events so file should be empty.
