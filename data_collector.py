@@ -14,6 +14,7 @@ import threading
 import time
 import logging
 import codecs
+import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
 
@@ -44,7 +45,9 @@ class DataCollector:
         self._window_size: int = kwargs.get('window_size', 10)
         if self._buff_size % self._window_size != 0:
             raise ValueError("buff size is not a multiple of window size.")
-        self._window_frequency_list = []
+        self._frequency_array = np.zeros(self._buff_size // self._window_size)
+        self._freq_index = 0
+        self._date_time_format = "%Y%m%d %H%M%S.%f"
 
         # self._save_dir: str = save_dir
         # self._buff_threshold: int = kwargs.get('buff_threshold', 7)
@@ -110,7 +113,13 @@ class DataCollector:
     def _update_frequency_history(self, cur_buff_index: int) -> None:
         """Update the window event frequency history."""
         window_data = self._buff.iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
-        a=1
+        window_data.iloc[:, 0] = pd.to_datetime(window_data.iloc[:, 0], format=self._date_time_format)
+        diff = window_data.iloc[-1, 0] - window_data.iloc[0, 0]
+        freq = len(window_data) / diff.total_seconds()
+        self._frequency_array[self._freq_index] = freq
+        self._freq_index += 1
+        if self._freq_index == len(self._frequency_array):
+            self._freq_index = 0
 
     def _check_for_anomaly(self) -> None:
         """Check for event anomaly."""
@@ -149,7 +158,7 @@ class DataCollector:
             #     continue
 
             data = data.split()
-            data = [date_time_now.strftime("%Y%m%d %H%M%S.%f")[:-3]] + data
+            data = [date_time_now.strftime(self._date_time_format)[:-3]] + data
 
             if len(self._buff) < self._buff_size:
                 # fill buffer for first time
@@ -157,8 +166,6 @@ class DataCollector:
                 event_counter += 1
             else:
                 # repeat filling
-                #if not self._window_frequency_list:
-                #    self._update_window_frequency_list()
                 buff_index = event_counter % self._buff_size
                 self._buff.loc[buff_index] = data
                 event_counter += 1
