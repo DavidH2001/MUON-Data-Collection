@@ -36,7 +36,7 @@ class DataCollector:
                save_results: ??? do we need this ???
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
         """
-        logging.basicConfig(encoding='utf-8', level=logging.INFO)
+        logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
         self._com_port = com_port
         if not os.path.exists(save_dir):
@@ -46,8 +46,11 @@ class DataCollector:
         if self._buff_size % self._window_size != 0:
             raise ValueError("buff size is not a multiple of window size.")
         self._frequency_array = np.zeros(self._buff_size // self._window_size)
-        self._freq_index = 0
+        self._frequency_index = 0
         self._date_time_format = "%Y%m%d %H%M%S.%f"
+        self._event_counter = 0
+        self._buff_index = 0
+
 
         # self._save_dir: str = save_dir
         # self._buff_threshold: int = kwargs.get('buff_threshold', 7)
@@ -101,6 +104,10 @@ class DataCollector:
     def acquisition_ended(self):
         return self._acquisition_ended
 
+    @property
+    def frequency_array(self):
+        return self._frequency_array
+
     def _wait_for_start(self, name: str):
 
         while True:
@@ -116,10 +123,11 @@ class DataCollector:
         window_data.iloc[:, 0] = pd.to_datetime(window_data.iloc[:, 0], format=self._date_time_format)
         diff = window_data.iloc[-1, 0] - window_data.iloc[0, 0]
         freq = len(window_data) / diff.total_seconds()
-        self._frequency_array[self._freq_index] = freq
-        self._freq_index += 1
-        if self._freq_index == len(self._frequency_array):
-            self._freq_index = 0
+        self._frequency_array[self._frequency_index] = freq
+        logging.debug(f"time diff = {diff.total_seconds()} _frequency_array[{self._frequency_index}] = {freq}")
+        self._frequency_index += 1
+        if self._frequency_index == len(self._frequency_array):
+            self._frequency_index = 0
 
     def _check_for_anomaly(self) -> None:
         """Check for event anomaly."""
@@ -134,7 +142,7 @@ class DataCollector:
         of the buffer queue are saved.
         """
         self._acquisition_ended = False
-        event_counter = 0
+        #event_counter = 0
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
@@ -163,17 +171,18 @@ class DataCollector:
             if len(self._buff) < self._buff_size:
                 # fill buffer for first time
                 self._buff.loc[len(self._buff)] = data
-                event_counter += 1
+                ###event_counter += 1
             else:
                 # repeat filling
-                buff_index = event_counter % self._buff_size
-                self._buff.loc[buff_index] = data
-                event_counter += 1
-                if not event_counter % self._window_size:
-                    self._update_frequency_history(buff_index)
+                ###buff_index = event_counter % self._buff_size
+                self._buff.loc[self._buff_index] = data
 
+            if self._event_counter and not self._event_counter % self._window_size:
+                self._update_frequency_history(self._buff_index)
+
+            self._buff_index = self._event_counter % self._buff_size
+            self._event_counter += 1
             logging.info(data)
-
 
         self._acquisition_ended = True
 
