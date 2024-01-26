@@ -84,7 +84,7 @@ class DataCollectorTest(unittest.TestCase):
                                   save_dir=temp_dir,
                                   buff_size=10,
                                   window_size=3)
-            self.assertTrue("buff size is not a multiple of window size." in str(context.exception))
+            self.assertTrue("Require buff size is an odd multiple of window size." in str(context.exception))
 
     def test_data_collector_csv(self):
 
@@ -103,7 +103,7 @@ class DataCollectorTest(unittest.TestCase):
             data_collector.acquire_data()
             while not data_collector.acquisition_ended:
                 sleep(0.01)
-            self.assertEquals(data_collector.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
             f = data_collector.frequency_array.copy()
             self.assertTrue(f[1] == f[2] == 0.0)
             self.assertTrue(int(f[0]) > 9.0 and f[0] < 14.0)
@@ -113,7 +113,7 @@ class DataCollectorTest(unittest.TestCase):
             data_collector.acquire_data()
             while not data_collector.acquisition_ended:
                 sleep(0.01)
-            self.assertEquals(data_collector.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
             f2 = data_collector.frequency_array.copy()
             self.assertTrue(f[0] == f2[0])
             self.assertTrue(int(f2[1]) > 9.0 and f2[1] < 14.0)
@@ -125,7 +125,7 @@ class DataCollectorTest(unittest.TestCase):
             data_collector.acquire_data()
             while not data_collector.acquisition_ended:
                 sleep(0.01)
-            self.assertEquals(data_collector.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
             f3 = data_collector.frequency_array.copy()
             self.assertTrue(f3[0] == f2[0])
             self.assertTrue(f3[1] == f2[1])
@@ -138,7 +138,7 @@ class DataCollectorTest(unittest.TestCase):
             data_collector.acquire_data()
             while not data_collector.acquisition_ended:
                 sleep(0.01)
-            self.assertEquals(data_collector.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
             f4 = data_collector.frequency_array.copy()
             self.assertTrue(f4[0] != f3[0])
             self.assertTrue(f4[2] == f3[2])
@@ -153,9 +153,10 @@ class DataCollectorTest(unittest.TestCase):
 
         if True:  # with tempfile.TemporaryDir() as temp_dir:
             window_size = 5
+            buff_size = 25
             with DataCollector(self.mock_com_port,
                                save_dir=temp_dir,
-                               buff_size=20,
+                               buff_size=buff_size,
                                window_size=window_size,
                                save_results=True,
                                use_arduino_time=self.use_arduino_time) as data_collector:
@@ -163,4 +164,24 @@ class DataCollectorTest(unittest.TestCase):
                 data_collector.acquire_data()
                 while not data_collector.acquisition_ended:
                     sleep(0.01)
+
+                self.assertEqual(len(data_collector.saved_file_names), 2)
+                file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
+                self.assertTrue(os.path.isfile(file_path))
+                df = pd.read_csv(file_path)
+                self.assertEqual(df.shape, (buff_size, 8))
+                df = df.sort_values(by=['event'], ignore_index=True)
+                # check high anomaly is in center of saved event buffer
+                self.assertEqual(df['event'][df.shape[0] // 2], 69)
+
+                file_path = os.path.join(temp_dir, data_collector.saved_file_names[1])
+                self.assertTrue(os.path.isfile(file_path))
+                df = pd.read_csv(file_path)
+                self.assertEqual(df.shape, (buff_size, 8))
+                df = df.sort_values(by=['event'], ignore_index=True)
+                # check low anomaly is in center of saved event buffer
+                self.assertEqual(df['event'][df.shape[0] // 2], 104)
+                a=1
+
+
 

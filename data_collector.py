@@ -39,14 +39,16 @@ class DataCollector:
         logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
         self._com_port = com_port
-        self._save_dir: int = kwargs.get('save_dir', None)
+        self._save_dir: str = kwargs.get('save_dir', None)
+        self._saved_file_names: list = []
         if self._save_dir and not os.path.exists(self._save_dir):
             raise NotADirectoryError(f"The specified save directory {self._save_dir} does not exist.")
-        self._buff_size: int = kwargs.get('buff_size', 100)
+        self._buff_size: int = kwargs.get('buff_size', 90)
         self._window_size: int = kwargs.get('window_size', 10)
         if self._buff_size % self._window_size != 0:
-            raise ValueError("buff size is not a multiple of window size.")
+            raise ValueError("Require buff size is an odd multiple of window size.")
         self._frequency_array: np.array = np.zeros(self._buff_size // self._window_size)
+        self._mid_frequency_index = self.frequency_array.size // 2
         self._frequency_median: float = 0.0
         self._frequency_index: int = 0
         self._frequency_array_full: bool = False
@@ -96,6 +98,10 @@ class DataCollector:
     def event_counter(self):
         return self._event_counter
 
+    @property
+    def saved_file_names(self):
+        return self._saved_file_names
+
     def _wait_for_start(self, name: str):
 
         while True:
@@ -107,10 +113,10 @@ class DataCollector:
 
     def _save_buff(self):
         """Save current content of buffer."""
-        name = self._buff['comp_time'][0].strftime("%Y%m%d-%H%M%S.csv")
-        file_path = os.path.join(self._save_dir, name)
+        self._saved_file_names.append(self._buff['comp_time'][0].strftime("%Y%m%d-%H%M%S.csv"))
+        file_path = os.path.join(self._save_dir, self._saved_file_names[-1])
         logging.info(f"Saving buffer to file {file_path}")
-        self._buff.to_csv(file_path)
+        self._buff.to_csv(file_path, index=False)
 
     def _check_for_anomaly(self, frequency) -> None:
         """Check for event anomaly."""
@@ -123,27 +129,31 @@ class DataCollector:
         return False
 
     def _update_frequency_history(self, cur_buff_index: int) -> None:
-        """Update the window event frequency history."""
+        """With new window set of data available - update the window event frequency history."""
         window_data = self._buff.iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
         window_data.iloc[:, 0] = pd.to_datetime(window_data.iloc[:, 0], format=self._date_time_format)
         diff = window_data.iloc[-1, 0] - window_data.iloc[0, 0]
-        window_average_freq = len(window_data) / diff.total_seconds()
-        self._frequency_array[self._frequency_index] = window_average_freq
+        window_freq = len(window_data) / diff.total_seconds()
+        if self._frequency_array_full:
+            self._frequency_array = np.roll(self._frequency_array, -1)
+            self._frequency_array[-1] = window_freq
+        else:
+            self._frequency_array[self._frequency_index] = window_freq
         logging.debug(f"time diff (s) = {diff.total_seconds()} _frequency_array[{self._frequency_index}] = "
-                      f"{window_average_freq}")
+                      f"{window_freq}")
         self._frequency_index += 1
         if self._frequency_index == len(self._frequency_array):
+            # end of frequency array reached covering a full buffer
             self._frequency_index = 0
             self._frequency_array_full = True
+
+            if self._frequency_array_full:
+                # frequency array (and hence event buffer) is now full so start to capture current frequency median
+                self._frequency_median = np.median(self._frequency_array)
+                logging.debug(f"frequency median = {self._frequency_median}")
         if self._frequency_array_full:
-            # frequency array (and hence event buffer) is now full so start to capture current frequency median
-            self._frequency_median = np.median(self._frequency_array)
-            logging.debug(f"freqency median = {self._frequency_median}")
-            # if window_average_freq > (1 + self._anomaly_detect_fraction) * self._frequency_median:
-            #     logging.info("HIGH ANOMALY DETECTED!!!")
-            # if window_average_freq < (1 - self._anomaly_detect_fraction) * self._frequency_median:
-            #     logging.info("LOW ANOMALY DETECTED!!!")
-            if self._check_for_anomaly(window_average_freq):
+            print(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")
+            if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
                 self._save_buff()
 
     def _acquire_data(self) -> None:
