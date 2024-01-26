@@ -24,13 +24,13 @@ class DataCollector:
 
     def __init__(self,
                  com_port: str,
-                 save_dir: str = None,
                  **kwargs):
         """
         Constructor.
         :param com_port:
         :param save_dir:
         :param kwargs:
+               save_dir: Optional string used to define a directory to save triggered events.
                buff_size: The number of events to be held in the buffer.
                window_size: The number of events used by the anomaly window.
                save_results: ??? do we need this ???
@@ -39,39 +39,23 @@ class DataCollector:
         logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
         self._com_port = com_port
-        if not os.path.exists(save_dir):
-            raise NotADirectoryError(f"The specified save directory {save_dir} does not exist.")
+        self._save_dir: int = kwargs.get('save_dir', None)
+        if self._save_dir and not os.path.exists(self._save_dir):
+            raise NotADirectoryError(f"The specified save directory {self._save_dir} does not exist.")
         self._buff_size: int = kwargs.get('buff_size', 100)
         self._window_size: int = kwargs.get('window_size', 10)
         if self._buff_size % self._window_size != 0:
             raise ValueError("buff size is not a multiple of window size.")
-        self._frequency_array = np.zeros(self._buff_size // self._window_size)
-        self._frequency_index = 0
-        self._date_time_format = "%Y%m%d %H%M%S.%f"
-        self._event_counter = 0
-        self._buff_index = 0
-
-
-        # self._save_dir: str = save_dir
-        # self._buff_threshold: int = kwargs.get('buff_threshold', 7)
-        # self._buff_time_ms: int = kwargs.get('buff_time_ms', 60000)
+        self._frequency_array: np.array = np.zeros(self._buff_size // self._window_size)
+        self._frequency_median: float = 0.0
+        self._frequency_index: int = 0
+        self._frequency_array_full: bool = False
+        self._anomaly_detect_fraction = 0.2
+        self._date_time_format: str = "%Y%m%d %H%M%S.%f"
+        self._event_counter: int = 0
+        self._buff_index: int = 0
         self._trigger_string: bool = kwargs.get('trigger_string', '')
-        # self._save_results: bool = kwargs.get('save_results', True)
-        # self._use_arduino_time: bool = kwargs.get('use_arduino_time', False)
-        # self._start_time: (datetime, int) = None
-        # self._last_buff_saved_ms = None
-        # self._buff = TextBuff()
-        # self._buff_queue = kwargs.get("buff_queue", BuffQueue(save_dir=save_dir))
-        # self._event_file = None
         self._acquisition_ended = False
-        # self._buff_count = 0
-        # self._event_count = 0
-        # self._previous_arduino_time: int = 0
-        # self._last_buff_count_saved: int = 0
-        # self._event_freq_history: np.ndarray = np.zeros(self._buff_queue.max_entries)
-        # self._median_frequency: float = None
-        #self._df = pd.DataFrame(columns=['date_time', 'comp_time', 'event', 'adc', 'sipm', 'dead_time', 'temp', 'name'],
-        #                        dtype=['str', 'int', 'int', 'int', 'float', 'float', 'int', 'float', 'str'])
         self._buff = pd.DataFrame({'comp_time': pd.Series(dtype='str'),
                                    'event': pd.Series(dtype='int'),
                                    'arduino_time': pd.Series(dtype='int'),
@@ -108,6 +92,10 @@ class DataCollector:
     def frequency_array(self):
         return self._frequency_array
 
+    @property
+    def event_counter(self):
+        return self._event_counter
+
     def _wait_for_start(self, name: str):
 
         while True:
@@ -117,21 +105,46 @@ class DataCollector:
             if name in str(line):
                 break
 
+    def _save_buff(self):
+        """Save current content of buffer."""
+        name = self._buff['comp_time'][0].strftime("%Y%m%d-%H%M%S.csv")
+        file_path = os.path.join(self._save_dir, name)
+        logging.info(f"Saving buffer to file {file_path}")
+        self._buff.to_csv(file_path)
+
+    def _check_for_anomaly(self, frequency) -> None:
+        """Check for event anomaly."""
+        if frequency > (1 + self._anomaly_detect_fraction) * self._frequency_median:
+            logging.info("HIGH ANOMALY DETECTED!!!")
+            return True
+        if frequency < (1 - self._anomaly_detect_fraction) * self._frequency_median:
+            logging.info("LOW ANOMALY DETECTED!!!")
+            return True
+        return False
+
     def _update_frequency_history(self, cur_buff_index: int) -> None:
         """Update the window event frequency history."""
         window_data = self._buff.iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
         window_data.iloc[:, 0] = pd.to_datetime(window_data.iloc[:, 0], format=self._date_time_format)
         diff = window_data.iloc[-1, 0] - window_data.iloc[0, 0]
-        freq = len(window_data) / diff.total_seconds()
-        self._frequency_array[self._frequency_index] = freq
-        logging.debug(f"time diff = {diff.total_seconds()} _frequency_array[{self._frequency_index}] = {freq}")
+        window_average_freq = len(window_data) / diff.total_seconds()
+        self._frequency_array[self._frequency_index] = window_average_freq
+        logging.debug(f"time diff (s) = {diff.total_seconds()} _frequency_array[{self._frequency_index}] = "
+                      f"{window_average_freq}")
         self._frequency_index += 1
         if self._frequency_index == len(self._frequency_array):
             self._frequency_index = 0
-
-    def _check_for_anomaly(self) -> None:
-        """Check for event anomaly."""
-        pass
+            self._frequency_array_full = True
+        if self._frequency_array_full:
+            # frequency array (and hence event buffer) is now full so start to capture current frequency median
+            self._frequency_median = np.median(self._frequency_array)
+            logging.debug(f"freqency median = {self._frequency_median}")
+            # if window_average_freq > (1 + self._anomaly_detect_fraction) * self._frequency_median:
+            #     logging.info("HIGH ANOMALY DETECTED!!!")
+            # if window_average_freq < (1 - self._anomaly_detect_fraction) * self._frequency_median:
+            #     logging.info("LOW ANOMALY DETECTED!!!")
+            if self._check_for_anomaly(window_average_freq):
+                self._save_buff()
 
     def _acquire_data(self) -> None:
         """
@@ -142,7 +155,6 @@ class DataCollector:
         of the buffer queue are saved.
         """
         self._acquisition_ended = False
-        #event_counter = 0
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
@@ -151,30 +163,15 @@ class DataCollector:
                 break
 
             data = codecs.decode(data, 'UTF-8')
-            #self._event_count += 1
             date_time_now = datetime.now(timezone.utc)
-
-            # if self._start_time is None:
-            #     # First time round so set start time.
-            #     if self._use_arduino_time:
-            #         split_data = data.split()
-            #         arduino_time = int(split_data[2])
-            #         self._start_time = arduino_time
-            #     else:
-            #         self._start_time = date_time_now
-            #     logging.info(f'start_time = {self._start_time}')
-            #     continue
-
             data = data.split()
             data = [date_time_now.strftime(self._date_time_format)[:-3]] + data
 
             if len(self._buff) < self._buff_size:
                 # fill buffer for first time
                 self._buff.loc[len(self._buff)] = data
-                ###event_counter += 1
             else:
                 # repeat filling
-                ###buff_index = event_counter % self._buff_size
                 self._buff.loc[self._buff_index] = data
 
             if self._event_counter and not self._event_counter % self._window_size:

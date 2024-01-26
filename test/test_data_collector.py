@@ -25,7 +25,7 @@ class DataCollectorTest(unittest.TestCase):
         self.data_index = 0
         self.use_arduino_time = False
         self.previous_arduino_time = 0
-        self.max_events_processed = None
+        self.max_events_to_be_processed = None
 
         # Get and prepare test data from CSV file.
         self.df = pd.read_csv("./data/event_test_set2.csv", dtype={0: str, 1: str}).iloc[:, 0:7]
@@ -35,7 +35,7 @@ class DataCollectorTest(unittest.TestCase):
 
         def _data_func():
             """Function used to handle the serving up of the serial data."""
-            if self.max_events_processed and self.data_index == self.max_events_processed:
+            if self.max_events_to_be_processed and self.data_index == self.max_events_to_be_processed:
                 result = b'exit'
             else:
                 result = self.data[self.data_index]
@@ -88,46 +88,79 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_csv(self):
 
+        # Define a buffer of 12 events with a window size of 4 events. This will result in a frequency array of
+        # size 3.
+        window_size = 4
+        with DataCollector(self.mock_com_port,
+                           buff_size=12,
+                           window_size=window_size,
+                           save_results=True,
+                           use_arduino_time=self.use_arduino_time) as data_collector:
+
+            # Collect 1 window length of events so frequency array should contain 1 value.
+            self.max_events_to_be_processed = window_size + 1
+            # Middle data buffer only contained 7 events so file should be empty.
+            data_collector.acquire_data()
+            while not data_collector.acquisition_ended:
+                sleep(0.01)
+            self.assertEquals(data_collector.event_counter, self.max_events_to_be_processed)
+            f = data_collector.frequency_array.copy()
+            self.assertTrue(f[1] == f[2] == 0.0)
+            self.assertTrue(int(f[0]) > 9.0 and f[0] < 14.0)
+
+            # Collect another window length of events so frequency array should contain 2 values.
+            self.max_events_to_be_processed = 2 * window_size + 1
+            data_collector.acquire_data()
+            while not data_collector.acquisition_ended:
+                sleep(0.01)
+            self.assertEquals(data_collector.event_counter, self.max_events_to_be_processed)
+            f2 = data_collector.frequency_array.copy()
+            self.assertTrue(f[0] == f2[0])
+            self.assertTrue(int(f2[1]) > 9.0 and f2[1] < 14.0)
+            self.assertTrue(f2[2] == 0.0)
+
+            # Collect another window length of events so frequency array should now be full of 3 values.
+            self.max_events_to_be_processed = 3 * window_size + 1
+            # Middle data buffer only contained 7 events so file should be empty.
+            data_collector.acquire_data()
+            while not data_collector.acquisition_ended:
+                sleep(0.01)
+            self.assertEquals(data_collector.event_counter, self.max_events_to_be_processed)
+            f3 = data_collector.frequency_array.copy()
+            self.assertTrue(f3[0] == f2[0])
+            self.assertTrue(f3[1] == f2[1])
+            self.assertTrue(f3[2] != f2[2])
+
+            # Collect another window length of events so frequency array should remain full with first (original)
+            # value overwritten.
+            self.max_events_to_be_processed = 4 * window_size + 1
+            # Middle data buffer only contained 7 events so file should be empty.
+            data_collector.acquire_data()
+            while not data_collector.acquisition_ended:
+                sleep(0.01)
+            self.assertEquals(data_collector.event_counter, self.max_events_to_be_processed)
+            f4 = data_collector.frequency_array.copy()
+            self.assertTrue(f4[0] != f3[0])
+            self.assertTrue(f4[2] == f3[2])
+            self.assertTrue(f4[2] == f3[2])
+
+
+    def test_data_collector_trigger(self):
+
         temp_dir = 'c:/Users/dave/Temp'
         # if os.path.isfile(data_file):
         #     os.remove(data_file)
 
         if True:  # with tempfile.TemporaryDir() as temp_dir:
-            window_size = 4
+            window_size = 5
             with DataCollector(self.mock_com_port,
                                save_dir=temp_dir,
-                               buff_size=12,
+                               buff_size=20,
                                window_size=window_size,
                                save_results=True,
                                use_arduino_time=self.use_arduino_time) as data_collector:
-                self.max_events_processed = window_size + 1
-                # Middle data buffer only contained 7 events so file should be empty.
+
                 data_collector.acquire_data()
                 while not data_collector.acquisition_ended:
                     sleep(0.01)
-
-                f = data_collector.frequency_array.copy()
-                self.assertTrue(f[1] == f[2] == 0.0)
-                self.assertTrue(int(f[0]) > 9.0 and f[0] < 14.0)
-
-                self.max_events_processed = window_size + window_size + 2
-                # Middle data buffer only contained 7 events so file should be empty.
-                data_collector.acquire_data()
-                while not data_collector.acquisition_ended:
-                    sleep(0.01)
-                f2 = data_collector.frequency_array.copy()
-
-                self.assertTrue(f[0] == f2[0])
-                self.assertTrue(int(f2[1]) > 9.0 and f2[1] < 14.0)
-                self.assertTrue(f2[2] == 0.0)
-
-
-                a=1
-                #files = [f for f in os.listdir(temp_dir)] # if os.path.isfile(os.path.join(temp_dir, f))]
-
-
-
-                #self.assertTrue(os.stat(data_file).st_size == 0)
-                # self assert have 3 files
-
 
