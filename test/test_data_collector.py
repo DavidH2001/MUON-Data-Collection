@@ -22,16 +22,9 @@ class DataCollectorTest(unittest.TestCase):
         pass
 
     def setUp(self):
-        self.data_index = 0
-        self.use_arduino_time = False
-        self.previous_arduino_time = 0
-        self.max_events_to_be_processed = None
-
-        # Get and prepare test data from CSV file.
-        self.df = pd.read_csv("./data/event_test_set2.csv", dtype={0: str, 1: str}).iloc[:, 0:7]
-        self.data = [f"{row[0]} {row[1]} {row[2]} {row[3]} {row[4]} {row[5]} {row[6]}".encode() for _, row in
-                     self.df.iterrows()]
-        self.data.append(b'exit')
+        """The test setup is responsible for setting up a mocked serial comm port that will be passed to the
+        DataCollector instance constructor. The mocked comm port uses _data_func() to feed the test event data (held
+        in a CSV file) to the collector one line at a time."""
 
         def _data_func():
             """Function used to handle the serving up of the serial data."""
@@ -54,6 +47,16 @@ class DataCollectorTest(unittest.TestCase):
                 self.data_index += 1
             return result
 
+        self.data_index = 0
+        self.use_arduino_time = False
+        self.previous_arduino_time = 0
+        self.max_events_to_be_processed = None
+
+        # Get and prepare test data from CSV file.
+        self.df = pd.read_csv("./data/event_test_set2.csv", dtype={0: str, 1: str}).iloc[:, 0:7]
+        self.data = [f"{row[0]} {row[1]} {row[2]} {row[3]} {row[4]} {row[5]} {row[6]}".encode() for _, row in
+                     self.df.iterrows()]
+        self.data.append(b'exit')
         self._data_func = _data_func
 
         # Mock the data collector com_port returned by serial package. The above data will be returned
@@ -86,10 +89,15 @@ class DataCollectorTest(unittest.TestCase):
                                   window_size=3)
             self.assertTrue("Require buff size is an odd multiple of window size." in str(context.exception))
 
-    def test_data_collector_csv(self):
+    def test_data_collector_event_consumpton(self):
+        """This test consumes event data from the mocked serial comm port which is defined in the above setup()
+        function. Using the test class member variable variable max_events_to_be_processed, the event data is consumed
+        in a number of consecutive batches testing the collector status as we go.
+        This test defines a buffer of 12 events using a window size of 4 events which results in a frequency array of
+        size 3.
 
-        # Define a buffer of 12 events with a window size of 4 events. This will result in a frequency array of
-        # size 3.
+        """
+
         window_size = 4
         with DataCollector(self.mock_com_port,
                            buff_size=12,
@@ -121,7 +129,7 @@ class DataCollectorTest(unittest.TestCase):
 
             # Collect another window length of events so frequency array should now be full of 3 values.
             self.max_events_to_be_processed = 3 * window_size + 1
-            # Middle data buffer only contained 7 events so file should be empty.
+            # Middle data buffer only containd 7 events so file should be empty.
             data_collector.acquire_data()
             while not data_collector.acquisition_ended:
                 sleep(0.01)
@@ -146,6 +154,9 @@ class DataCollectorTest(unittest.TestCase):
 
 
     def test_data_collector_trigger(self):
+        """This test also consumes event data from the mocked serial comm port which
+        function. Using the test class member variable variable max_events_to_be_processed, the event data is consumed
+        in a number of consecutive batches testing the collector status as we go."""
 
         temp_dir = 'c:/Users/dave/Temp'
         # if os.path.isfile(data_file):

@@ -20,8 +20,19 @@ from datetime import datetime, timezone
 
 
 class DataCollector:
-    """Data collector object class."""
+    """Data collector object class.
 
+    This class is used to consume event data from a serial comm port and process it by looking for acquisition frequency
+    (high/low) anomalies. When an anomaly is detected the event data buffer is saved to a file.
+
+    The maximum events that can be held by the collector is defined by a buffer size. The buffer is split into a
+    number of sub buffers (windows) that are used to define the event frequency at their time of acquisition. When the
+    buffer is full the corresponding logged window frequencies are used to determine a baseline (median) frequency.
+    This baseline frequency is continuously updated to allow for any drift in the detector system. A window frequency
+    is also used to detect anomalies by comparing it against the current baseline.
+
+    Anomaly detection starts after the buffer has been initially filled with events using its central window. This
+    enables events preceding and following an anomaly to be logged."""
     def __init__(self,
                  com_port: str,
                  **kwargs):
