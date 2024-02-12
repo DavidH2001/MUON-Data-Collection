@@ -5,7 +5,6 @@ Created on Fri Jul 29 14:01:33 2022
 
 @author: dave
 """
-import copy
 import os
 import unittest
 from time import sleep
@@ -27,7 +26,7 @@ class DataCollectorTest(unittest.TestCase):
         in a CSV file) to the collector one line at a time."""
 
         def _data_func():
-            """Function used to handle the serving up of the serial data."""
+            """Embedded function used to handle the serving up of the serial data."""
             if self.max_events_to_be_processed and self.data_index == self.max_events_to_be_processed:
                 result = b'exit'
             else:
@@ -89,15 +88,12 @@ class DataCollectorTest(unittest.TestCase):
                                   window_size=3)
             self.assertTrue("Require buff size is an odd multiple of window size." in str(context.exception))
 
-    def test_data_collector_event_consumpton(self):
+    def test_data_collector_event_consumption(self):
         """This test consumes event data from the mocked serial comm port which is defined in the above setup()
-        function. Using the test class member variable variable max_events_to_be_processed, the event data is consumed
-        in a number of consecutive batches testing the collector status as we go.
-        This test defines a buffer of 12 events using a window size of 4 events which results in a frequency array of
-        size 3.
-
+        function. Using the test class member variable max_events_to_be_processed, the event data is consumed in a
+        number of consecutive batches testing the collector status as we go. This test defines a buffer of 12 events
+        using a window size of 4 events which results in a frequency array of size 3.
         """
-
         window_size = 4
         with DataCollector(self.mock_com_port,
                            buff_size=12,
@@ -129,7 +125,7 @@ class DataCollectorTest(unittest.TestCase):
 
             # Collect another window length of events so frequency array should now be full of 3 values.
             self.max_events_to_be_processed = 3 * window_size + 1
-            # Middle data buffer only containd 7 events so file should be empty.
+            # Middle data buffer only contained 7 events so file should be empty.
             data_collector.acquire_data()
             while not data_collector.acquisition_ended:
                 sleep(0.01)
@@ -139,7 +135,7 @@ class DataCollectorTest(unittest.TestCase):
             self.assertTrue(f3[1] == f2[1])
             self.assertTrue(f3[2] != f2[2])
 
-            # Collect another window length of events so frequency array should remain full with first (original)
+            # Collect another window length of events so frequency array should remain full and first (original)
             # value overwritten.
             self.max_events_to_be_processed = 4 * window_size + 1
             # Middle data buffer only contained 7 events so file should be empty.
@@ -152,12 +148,8 @@ class DataCollectorTest(unittest.TestCase):
             self.assertTrue(f4[2] == f3[2])
             self.assertTrue(f4[2] == f3[2])
 
-
-    def test_data_collector_trigger(self):
-        """This test also consumes event data from the mocked serial comm port which
-        function. Using the test class member variable variable max_events_to_be_processed, the event data is consumed
-        in a number of consecutive batches testing the collector status as we go."""
-
+    def test_data_collector_event_anomalies(self):
+        """Test logging of event anomalies to file."""
         temp_dir = 'c:/Users/dave/Temp'
         # if os.path.isfile(data_file):
         #     os.remove(data_file)
@@ -192,7 +184,31 @@ class DataCollectorTest(unittest.TestCase):
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check low anomaly is in center of saved event buffer
                 self.assertEqual(df['event'][df.shape[0] // 2], 104)
-                a=1
+
+    def test_data_collector_log_all_events(self):
+        """Test logging of all events to file."""
+        temp_dir = 'c:/Users/dave/Temp'
+        # if os.path.isfile(data_file):
+        #     os.remove(data_file)
+
+        if True:  # with tempfile.TemporaryDir() as temp_dir:
+            window_size = 10
+            buff_size = 30
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               anomaly_detect_fraction=0.0,
+                               save_results=True,
+                               use_arduino_time=self.use_arduino_time) as data_collector:
+
+                data_collector.acquire_data()
+                while not data_collector.acquisition_ended:
+                    sleep(0.01)
+
+                self.assertEqual(len(data_collector.saved_file_names), 1)
+                file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
+                self.assertTrue(os.path.isfile(file_path))
 
 
 

@@ -28,7 +28,7 @@ class DataCollector:
     The maximum events that can be held by the collector is defined by a buffer size. The buffer is split into a
     number of sub buffers (windows) that are used to define the event frequency at their time of acquisition. When the
     buffer is full the corresponding logged window frequencies are used to determine a baseline (median) frequency.
-    This baseline frequency is continuously updated to allow for any drift in the detector system. A window frequency
+    This baseline frequency is continuously updated to allow for any drift in the detector system.The window frequency
     is also used to detect anomalies by comparing it against the current baseline.
 
     Anomaly detection starts after the buffer has been initially filled with events using its central window. This
@@ -44,6 +44,8 @@ class DataCollector:
                save_dir: Optional string used to define a directory to save triggered events.
                buff_size: The number of events to be held in the buffer.
                window_size: The number of events used by the anomaly window.
+               anomaly_detect_fraction: Optional fraction of base frequency used to trigger anomaly. Setting this to
+               0.0 will cause all events to be saved. Defaults to 0.2.
                save_results: ??? do we need this ???
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
         """
@@ -63,7 +65,7 @@ class DataCollector:
         self._frequency_median: float = 0.0
         self._frequency_index: int = 0
         self._frequency_array_full: bool = False
-        self._anomaly_detect_fraction = 0.2
+        self._anomaly_detect_fraction = kwargs.get("anomaly_detect_fraction", 0.2)
         self._date_time_format: str = "%Y%m%d %H%M%S.%f"
         self._event_counter: int = 0
         self._buff_index: int = 0
@@ -163,9 +165,12 @@ class DataCollector:
                 self._frequency_median = np.median(self._frequency_array)
                 logging.debug(f"frequency median = {self._frequency_median}")
         if self._frequency_array_full:
-            print(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")
-            if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
+            if self._anomaly_detect_fraction == 0.0:
                 self._save_buff()
+            else:
+                logging.debug(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")
+                if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
+                    self._save_buff()
 
     def _acquire_data(self) -> None:
         """
