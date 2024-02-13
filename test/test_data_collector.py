@@ -198,7 +198,7 @@ class DataCollectorTest(unittest.TestCase):
                                save_dir=temp_dir,
                                buff_size=buff_size,
                                window_size=window_size,
-                               anomaly_detect_fraction=0.0,
+                               log_all_events=True,
                                save_results=True,
                                use_arduino_time=self.use_arduino_time) as data_collector:
 

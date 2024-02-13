@@ -25,14 +25,18 @@ class DataCollector:
     This class is used to consume event data from a serial comm port and process it by looking for acquisition frequency
     (high/low) anomalies. When an anomaly is detected the event data buffer is saved to a file.
 
-    The maximum events that can be held by the collector is defined by a buffer size. The buffer is split into a
+    The maximum events that can be held by the collector is defined by buffer size. The buffer is split into a
     number of sub buffers (windows) that are used to define the event frequency at their time of acquisition. When the
     buffer is full the corresponding logged window frequencies are used to determine a baseline (median) frequency.
+    Each frequency is stored in array that has the same size as the number of windows spanning the buffer.
     This baseline frequency is continuously updated to allow for any drift in the detector system.The window frequency
     is also used to detect anomalies by comparing it against the current baseline.
 
     Anomaly detection starts after the buffer has been initially filled with events using its central window. This
-    enables events preceding and following an anomaly to be logged."""
+    enables events preceding and following an anomaly to be logged.
+
+    The Saved buffer CSV files are not ordered chronologically. When loading a CSV file (into a pandas data frame for
+    example) you will need to reorder the rows e.g., using event number."""
     def __init__(self,
                  com_port: str,
                  **kwargs):
@@ -42,14 +46,15 @@ class DataCollector:
         :param save_dir:
         :param kwargs:
                save_dir: Optional string used to define a directory to save triggered events.
-               buff_size: The number of events to be held in the buffer.
+               buff_size: The number of events to be held in the buffer. This should be set as an odd multiple of
+                    window_size.
                window_size: The number of events used by the anomaly window.
-               anomaly_detect_fraction: Optional fraction of base frequency used to trigger anomaly. Setting this to
-               0.0 will cause all events to be saved. Defaults to 0.2.
+               anomaly_detect_fraction: Optional fraction of base frequency used to trigger anomaly. Defaults to 0.2.
                save_results: ??? do we need this ???
+               log_all_events: Set to True to log all events to file(s). Defaults to False.
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
         """
-        logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
+        logging.basicConfig(encoding='utf-8', level=logging.INFO)
 
         self._com_port = com_port
         self._save_dir: str = kwargs.get('save_dir', None)
@@ -66,6 +71,7 @@ class DataCollector:
         self._frequency_index: int = 0
         self._frequency_array_full: bool = False
         self._anomaly_detect_fraction = kwargs.get("anomaly_detect_fraction", 0.2)
+        self._log_all_events: bool = kwargs.get('log_all_events', '')
         self._date_time_format: str = "%Y%m%d %H%M%S.%f"
         self._event_counter: int = 0
         self._buff_index: int = 0
@@ -142,35 +148,38 @@ class DataCollector:
         return False
 
     def _update_frequency_history(self, cur_buff_index: int) -> None:
-        """With new window set of data available - update the window event frequency history."""
+        """With a new window set of data available update the window event frequency history and look for anomalies."""
         window_data = self._buff.iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
         window_data.iloc[:, 0] = pd.to_datetime(window_data.iloc[:, 0], format=self._date_time_format)
         diff = window_data.iloc[-1, 0] - window_data.iloc[0, 0]
         window_freq = len(window_data) / diff.total_seconds()
         if self._frequency_array_full:
+            # update buffer by removing the oldest window frequency and adding latest frequency
             self._frequency_array = np.roll(self._frequency_array, -1)
             self._frequency_array[-1] = window_freq
         else:
+            # first time filling of frequency array
             self._frequency_array[self._frequency_index] = window_freq
+
         logging.debug(f"time diff (s) = {diff.total_seconds()} _frequency_array[{self._frequency_index}] = "
                       f"{window_freq}")
+
         self._frequency_index += 1
         if self._frequency_index == len(self._frequency_array):
-            # end of frequency array reached covering a full buffer
+            # end of frequency array reached
+            if self._log_all_events:
+                # save buffer anyway if we are not looking for anomalies
+                self._save_buff()
             self._frequency_index = 0
             self._frequency_array_full = True
+            # frequency array (and hence event buffer) is now full so start to capture current frequency median
+            self._frequency_median = np.median(self._frequency_array)
+            logging.info(f"Frequency Median = {self._frequency_median}")
 
-            if self._frequency_array_full:
-                # frequency array (and hence event buffer) is now full so start to capture current frequency median
-                self._frequency_median = np.median(self._frequency_array)
-                logging.debug(f"frequency median = {self._frequency_median}")
-        if self._frequency_array_full:
-            if self._anomaly_detect_fraction == 0.0:
+        if not self._log_all_events and self._frequency_array_full:
+            logging.debug(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")
+            if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
                 self._save_buff()
-            else:
-                logging.debug(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")
-                if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
-                    self._save_buff()
 
     def _acquire_data(self) -> None:
         """
@@ -197,15 +206,16 @@ class DataCollector:
                 # fill buffer for first time
                 self._buff.loc[len(self._buff)] = data
             else:
-                # repeat filling
+                # Repeat filling of buffer. Note start from the beginning overwriting the oldest values.
                 self._buff.loc[self._buff_index] = data
 
             if self._event_counter and not self._event_counter % self._window_size:
+                # next window buffer full
                 self._update_frequency_history(self._buff_index)
 
             self._buff_index = self._event_counter % self._buff_size
             self._event_counter += 1
-            logging.info(data)
+            logging.debug(data)
 
         self._acquisition_ended = True
 
