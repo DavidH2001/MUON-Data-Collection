@@ -45,7 +45,8 @@ class DataCollector:
         :param com_port:
         :param save_dir:
         :param kwargs:
-               save_dir: Optional string used to define a directory to save triggered events.
+               save_dir: Optional string used to define a directory to save triggered events. If not defined then
+                    events will not be saved.
                buff_size: The number of events to be held in the buffer. This should be set as an odd multiple of
                     window_size.
                window_size: The number of events used by the anomaly window.
@@ -179,9 +180,10 @@ class DataCollector:
         if not self._log_all_events and self._frequency_array_full:
             logging.debug(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")
             if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
-                self._save_buff()
+                if self._save_dir:
+                    self._save_buff()
 
-    def _acquire_data(self) -> None:
+    def _acquire_data(self, raw_dump: bool) -> None:
         """
         Main data acquisition function used to sink the data from the serial port and hold it in a queue of buffers.
         Each buffer can hold a number of events that arrive within the specified time period. When the buffer queue is
@@ -196,6 +198,10 @@ class DataCollector:
             if data == b'exit':
                 logging.info("EXIT!!!")
                 break
+
+            if raw_dump:
+                print(data)
+                continue
 
             data = codecs.decode(data, 'UTF-8')
             date_time_now = datetime.now(timezone.utc)
@@ -219,8 +225,8 @@ class DataCollector:
 
         self._acquisition_ended = True
 
-    def acquire_data(self) -> None:
-        t1 = threading.Thread(target=self._acquire_data)
+    def acquire_data(self,  raw_dump: bool = False) -> None:
+        t1 = threading.Thread(target=self._acquire_data(raw_dump))
         t1.start()
 
     def _signal_handler(self, signal, frame):
