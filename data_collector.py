@@ -52,16 +52,16 @@ class DataCollector:
                anomaly_detect_fraction: Optional fraction of base frequency used to trigger anomaly. Defaults to 0.2.
                save_results: ??? do we need this ???
                log_all_events: Set to True to log all events to file(s). Defaults to False.
+               ignore_header_size: Number of initial data lines to be ignored that represent the header. Defaults to 6.
                start_string: String sent from detector that will initiate event capture. Defaults to "" i.e. not used.
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
-
         """
         logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
         self._com_port = com_port
         self._save_dir: str = kwargs.get('save_dir', None)
         self._saved_file_names: list = []
-        self._header_size: int = 6
+        self._ignore_header_size: int = kwargs.get("ignore_header_size", 6)
         if self._save_dir and not os.path.exists(self._save_dir):
             raise NotADirectoryError(f"The specified save directory {self._save_dir} does not exist.")
         self._buff_size: int = kwargs.get('buff_size', 90)
@@ -83,7 +83,6 @@ class DataCollector:
         self._date_time_format: str = "%Y%m%d %H%M%S.%f"
         self._event_counter: int = 0
         self._buff_index: int = 0
-        #self._trigger_string: bool = kwargs.get('trigger_string', '')
         self._acquisition_ended = False
         self._buff = pd.DataFrame({'comp_time': pd.Series(dtype='str'),
                                    'event': pd.Series(dtype='int'),
@@ -91,8 +90,7 @@ class DataCollector:
                                    'adc': pd.Series(dtype='int'),
                                    'sipm': pd.Series(dtype='int'),
                                    'dead_time': pd.Series(dtype='int'),
-                                   'temp': pd.Series(dtype='float'),
-                                   'name': pd.Series(dtype='str')})
+                                   'temp': pd.Series(dtype='float')})
         signal.signal(signal.SIGINT, self._signal_handler)
 
     def __enter__(self):
@@ -202,17 +200,17 @@ class DataCollector:
                 break
 
             if self._look_for_start:
-                if data.find(self._start_string):
+                if data.find(self._start_string) != -1:
                     self._look_for_start = False
                     logging.info(f"Start string '{self._start_string}' detected - beginning acquisition...")
                 continue
             else:
                 # strip of the initial header data lines
-                if header_line_count < self._header_size:
+                if header_line_count < self._ignore_header_size:
                     header_line_count += 1
                     continue
 
-            data = data.split()
+            data = data.split()[0:6]
             # if len(data) < 6:
             #     # ignore anything that does not consist of at least 6 fields
             #     continue

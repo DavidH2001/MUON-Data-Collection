@@ -10,6 +10,7 @@ import unittest
 from time import sleep
 import tempfile
 import pandas as pd
+import codecs
 from data_collector import DataCollector
 from unittest.mock import Mock
 
@@ -99,6 +100,7 @@ class DataCollectorTest(unittest.TestCase):
                            buff_size=12,
                            window_size=window_size,
                            save_results=True,
+                           ignore_header_size=0,
                            use_arduino_time=self.use_arduino_time) as data_collector:
 
             # Collect 1 window length of events so frequency array should contain 1 value.
@@ -162,6 +164,7 @@ class DataCollectorTest(unittest.TestCase):
                                buff_size=buff_size,
                                window_size=window_size,
                                save_results=True,
+                               ignore_header_size=0,
                                use_arduino_time=self.use_arduino_time) as data_collector:
 
                 data_collector.acquire_data()
@@ -172,7 +175,7 @@ class DataCollectorTest(unittest.TestCase):
                 file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
                 self.assertTrue(os.path.isfile(file_path))
                 df = pd.read_csv(file_path)
-                self.assertEqual(df.shape, (buff_size, 8))
+                self.assertEqual(df.shape, (buff_size, 7))
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check high anomaly is in center of saved event buffer
                 self.assertEqual(df['event'][df.shape[0] // 2], 69)
@@ -180,7 +183,7 @@ class DataCollectorTest(unittest.TestCase):
                 file_path = os.path.join(temp_dir, data_collector.saved_file_names[1])
                 self.assertTrue(os.path.isfile(file_path))
                 df = pd.read_csv(file_path)
-                self.assertEqual(df.shape, (buff_size, 8))
+                self.assertEqual(df.shape, (buff_size, 7))
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check low anomaly is in center of saved event buffer
                 self.assertEqual(df['event'][df.shape[0] // 2], 104)
@@ -200,6 +203,7 @@ class DataCollectorTest(unittest.TestCase):
                                window_size=window_size,
                                log_all_events=True,
                                save_results=True,
+                               ignore_header_size=0,
                                use_arduino_time=self.use_arduino_time) as data_collector:
 
                 data_collector.acquire_data()
@@ -212,7 +216,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_start_string(self):
         """Test start acquisition trigger string."""
-        start_string = "Kaz"
+        start_string = b"Kaz"
         event_index = 6
         self.data[event_index] = start_string
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -224,7 +228,8 @@ class DataCollectorTest(unittest.TestCase):
                                window_size=window_size,
                                log_all_events=True,
                                save_results=True,
-                               start_string=start_string,
+                               ignore_header_size=0,
+                               start_string=codecs.decode(start_string, 'UTF-8'),
                                use_arduino_time=self.use_arduino_time) as data_collector:
 
                 data_collector.acquire_data()
@@ -248,6 +253,7 @@ class DataCollectorTest(unittest.TestCase):
                                window_size=window_size,
                                log_all_events=True,
                                save_results=True,
+                               ignore_header_size=0,
                                start_string=start_string,
                                use_arduino_time=self.use_arduino_time) as data_collector:
                 data_collector.acquire_data()
