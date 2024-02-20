@@ -53,7 +53,9 @@ class DataCollector:
                anomaly_detect_fraction: Optional fraction of base frequency used to trigger anomaly. Defaults to 0.2.
                save_results: ??? do we need this ???
                log_all_events: Set to True to log all events to file(s). Defaults to False.
+               start_string: String sent from detector that will initiate event capture. Defaults to "" i.e. not used.
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
+
         """
         logging.basicConfig(encoding='utf-8', level=logging.INFO)
 
@@ -73,10 +75,15 @@ class DataCollector:
         self._frequency_array_full: bool = False
         self._anomaly_detect_fraction = kwargs.get("anomaly_detect_fraction", 0.2)
         self._log_all_events: bool = kwargs.get('log_all_events', '')
+        self._start_string: bool = kwargs.get('start_string', '')
+        if self._start_string != '':
+            self._look_for_start = True
+        else:
+            self._look_for_start = False
         self._date_time_format: str = "%Y%m%d %H%M%S.%f"
         self._event_counter: int = 0
         self._buff_index: int = 0
-        self._trigger_string: bool = kwargs.get('trigger_string', '')
+        #self._trigger_string: bool = kwargs.get('trigger_string', '')
         self._acquisition_ended = False
         self._buff = pd.DataFrame({'comp_time': pd.Series(dtype='str'),
                                    'event': pd.Series(dtype='int'),
@@ -88,15 +95,15 @@ class DataCollector:
                                    'name': pd.Series(dtype='str')})
         signal.signal(signal.SIGINT, self._signal_handler)
 
-        print("\nTaking data ...")
-        print("Press ctl+c to terminate process")
-        time.sleep(1)
-        if self._trigger_string != '':
-            print("waiting for trigger string...")
-            self._wait_for_start(self._trigger_string)
-            print(f"Trigger string '{self._trigger_string}' detected, starting "
-                  "acquisition")
-        print("Starting acquisition")
+        # print("\nTaking data ...")
+        # print("Press ctl+c to terminate process")
+        # time.sleep(1)
+        # if self._trigger_string != '':
+        #     print("waiting for trigger string...")
+        #     self._wait_for_start(self._trigger_string)
+        #     print(f"Trigger string '{self._trigger_string}' detected, starting "
+        #           "acquisition")
+        # print("Starting acquisition")
 
     def __enter__(self):
         return self
@@ -195,9 +202,16 @@ class DataCollector:
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
+
             if data == b'exit':
                 logging.info("EXIT!!!")
                 break
+
+            if self._look_for_start:
+                if data == self._start_string:
+                    self._look_for_start = False
+                    logging.info(f"Start string '{self._start_string}' detected - beginning acquisition...")
+                continue
 
             if raw_dump:
                 print(data)

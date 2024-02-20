@@ -9,7 +9,6 @@ def serial_ports():
     """ Obtain a list of available serial port names.
     :returns: list of the serial ports.
     """
-    print(f"Platform: {sys.platform}")
     if sys.platform.startswith('win'):
         ports = ['COM%s' % (i + 1) for i in range(256)]
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
@@ -45,23 +44,39 @@ def serial_ports():
 #     print("The selected port is: " + port_name +'\n')
 #     return port_name
 
-def user_interact():
+def user_interact_part_one():
+    print(f"Host platform: {sys.platform}")
+    s_name = input("Is used then enter name of your S detector else [return] to continue: ")
+    if s_name != "":
+        print(f"Acquisition will only start when host detects '{s_name}' from connected detector.")
 
-    print('Available serial ports:\n')
+    print("Connect the S detector to a serial port on the host.")
+    option = input("Select [C] to continue or [Q] to : ")
+    if option.upper() != 'C':
+        sys.exit(0)
+
+    print('\nAvailable serial ports:')
     available_ports = serial_ports()
     for i, port_name in enumerate(available_ports):
         print(f"[{i+1}] {port_name}")
     print("[Q] Quit")
-    option = input("Select port connected to slave detector: ")
+    option = input("Identify the serial port connected to S detector or Q to quit: ")
     if not option.isdigit() or abs(int(option)) > len(available_ports):
         sys.exit(0)
+    return s_name, available_ports[int(option)-1]
 
-    print("GO!!!")
-    return available_ports[int(option)-1]
+
+def user_interact_part_two() -> bool:
+    print("Reset the M detector and then the S detector.")
+    print("Confirm that the detector displaying 'S---' is the one connected to the serial port.")
+    option = input("Select [C] to continue or [Q] to : ")
+    if option.upper() != 'C':
+        return False
+    return True
 
 
 def run():
-    port_name = user_interact()
+    s_name, port_name = user_interact_part_one()
     print(f"{port_name} selected")
 
     com_port = serial.Serial(port_name)
@@ -73,11 +88,17 @@ def run():
     dc = DataCollector(com_port=com_port,
                        save_dir=None,
                        buff_size=100,
-                       window_size=10)
+                       window_size=10,
+                       start_string=s_name)
+
+    if not user_interact_part_two():
+        com_port.close()
+        sys.exit(0)
 
     dc.acquire_data(raw_dump=True)
     while not dc.acquisition_ended:
         sleep(0.01)
+
 
 if __name__ == '__main__':
     run()

@@ -37,7 +37,7 @@ class DataCollectorTest(unittest.TestCase):
                     # Sleep off the difference between previous and current arduino times so as PC clock will
                     # approximate the time difference.
                     result_split = result.split()
-                    if result_split[0] != b'exit':
+                    if result_split[0] != b'exit' and len(result_split) > 1:
                         arduino_time = int(result_split[1])
                         arduino_elapsed_time = arduino_time - self.previous_arduino_time
                         sleep(arduino_elapsed_time / 1000)
@@ -144,17 +144,17 @@ class DataCollectorTest(unittest.TestCase):
                 sleep(0.01)
             self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
             f4 = data_collector.frequency_array.copy()
-            self.assertTrue(f4[0] != f3[0])
-            self.assertTrue(f4[2] == f3[2])
-            self.assertTrue(f4[2] == f3[2])
+            self.assertTrue(f4[0] == f3[1])
+            self.assertTrue(f4[1] == f3[2])
+            self.assertTrue(f4[2] != f3[2])
 
     def test_data_collector_event_anomalies(self):
         """Test logging of event anomalies to file."""
-        temp_dir = 'c:/Users/dave/Temp'
+        #temp_dir = 'c:/Users/dave/Temp'
         # if os.path.isfile(data_file):
         #     os.remove(data_file)
 
-        if True:  # with tempfile.TemporaryDir() as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 5
             buff_size = 25
             with DataCollector(self.mock_com_port,
@@ -206,9 +206,54 @@ class DataCollectorTest(unittest.TestCase):
                 while not data_collector.acquisition_ended:
                     sleep(0.01)
 
-                self.assertEqual(len(data_collector.saved_file_names), 1)
+                self.assertEqual(len(data_collector.saved_file_names), 4)
                 file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
                 self.assertTrue(os.path.isfile(file_path))
+
+    def test_data_collector_start_string(self):
+        """Test start acquisition trigger string."""
+        start_string = "Kaz"
+        event_index = 6
+        self.data[event_index] = start_string
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window_size = 10
+            buff_size = 30
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               log_all_events=True,
+                               save_results=True,
+                               start_string=start_string,
+                               use_arduino_time=self.use_arduino_time) as data_collector:
+
+                data_collector.acquire_data()
+                while not data_collector.acquisition_ended:
+                    sleep(0.01)
+
+                file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
+                self.assertTrue(os.path.isfile(file_path))
+                df = pd.read_csv(file_path, dtype={0: str, 1: str}).iloc[:, 0:7]
+                self.assertEqual(df['event'][0], str(event_index+2))
+
+    def test_data_collector_start_string_fail(self):
+        """Test start acquisition trigger string fails."""
+        start_string = "Kaz"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window_size = 10
+            buff_size = 30
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               log_all_events=True,
+                               save_results=True,
+                               start_string=start_string,
+                               use_arduino_time=self.use_arduino_time) as data_collector:
+                data_collector.acquire_data()
+                while not data_collector.acquisition_ended:
+                    sleep(0.01)
+                self.assertTrue(data_collector.saved_file_names == [])
 
 
 
