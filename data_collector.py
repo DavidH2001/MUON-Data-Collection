@@ -11,7 +11,6 @@ import os.path
 import sys
 import signal
 import threading
-import time
 import logging
 import codecs
 import numpy as np
@@ -57,11 +56,12 @@ class DataCollector:
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
 
         """
-        logging.basicConfig(encoding='utf-8', level=logging.INFO)
+        logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
         self._com_port = com_port
         self._save_dir: str = kwargs.get('save_dir', None)
         self._saved_file_names: list = []
+        self._header_size: int = 6
         if self._save_dir and not os.path.exists(self._save_dir):
             raise NotADirectoryError(f"The specified save directory {self._save_dir} does not exist.")
         self._buff_size: int = kwargs.get('buff_size', 90)
@@ -94,16 +94,6 @@ class DataCollector:
                                    'temp': pd.Series(dtype='float'),
                                    'name': pd.Series(dtype='str')})
         signal.signal(signal.SIGINT, self._signal_handler)
-
-        # print("\nTaking data ...")
-        # print("Press ctl+c to terminate process")
-        # time.sleep(1)
-        # if self._trigger_string != '':
-        #     print("waiting for trigger string...")
-        #     self._wait_for_start(self._trigger_string)
-        #     print(f"Trigger string '{self._trigger_string}' detected, starting "
-        #           "acquisition")
-        # print("Starting acquisition")
 
     def __enter__(self):
         return self
@@ -199,27 +189,34 @@ class DataCollector:
         of the buffer queue are saved.
         """
         self._acquisition_ended = False
+        header_line_count = 0
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
+            data = codecs.decode(data, 'UTF-8')
+            if raw_dump:
+                print(data)
 
-            if data == b'exit':
+            if data == 'exit':
                 logging.info("EXIT!!!")
                 break
 
             if self._look_for_start:
-                if data == self._start_string:
+                if data.find(self._start_string):
                     self._look_for_start = False
                     logging.info(f"Start string '{self._start_string}' detected - beginning acquisition...")
                 continue
+            else:
+                # strip of the initial header data lines
+                if header_line_count < self._header_size:
+                    header_line_count += 1
+                    continue
 
-            if raw_dump:
-                print(data)
-                continue
-
-            data = codecs.decode(data, 'UTF-8')
-            date_time_now = datetime.now(timezone.utc)
             data = data.split()
+            # if len(data) < 6:
+            #     # ignore anything that does not consist of at least 6 fields
+            #     continue
+            date_time_now = datetime.now(timezone.utc)
             data = [date_time_now.strftime(self._date_time_format)[:-3]] + data
 
             if len(self._buff) < self._buff_size:

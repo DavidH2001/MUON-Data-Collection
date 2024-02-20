@@ -46,14 +46,14 @@ def serial_ports():
 
 def user_interact_part_one():
     print(f"Host platform: {sys.platform}")
-    s_name = input("Is used then enter name of your S detector else [return] to continue: ")
-    if s_name != "":
-        print(f"Acquisition will only start when host detects '{s_name}' from connected detector.")
-
     print("Connect the S detector to a serial port on the host.")
-    option = input("Select [C] to continue or [Q] to : ")
-    if option.upper() != 'C':
-        sys.exit(0)
+    s_name = input("Enter the name of your S detector (if set) else select [return] to continue: ")
+    if s_name != "":
+        print(f"Acquisition will only start when the host detects '{s_name}' from connected detector.")
+
+    # option = input("Select [C] to continue or [Q] to : ")
+    # if option.upper() != 'C':
+    #     sys.exit(0)
 
     print('\nAvailable serial ports:')
     available_ports = serial_ports()
@@ -69,7 +69,7 @@ def user_interact_part_one():
 def user_interact_part_two() -> bool:
     print("Reset the M detector and then the S detector.")
     print("Confirm that the detector displaying 'S---' is the one connected to the serial port.")
-    option = input("Select [C] to continue or [Q] to : ")
+    option = input("Select [C] to continue or [Q] to quit: ")
     if option.upper() != 'C':
         return False
     return True
