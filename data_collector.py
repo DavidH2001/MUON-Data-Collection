@@ -50,14 +50,12 @@ class DataCollector:
                     window_size.
                window_size: The number of events used by the anomaly window.
                anomaly_detect_fraction: Optional fraction of base frequency used to trigger anomaly. Defaults to 0.2.
-               save_results: ??? do we need this ???
                log_all_events: Set to True to log all events to file(s). Defaults to False.
                ignore_header_size: Number of initial data lines to be ignored that represent the header. Defaults to 6.
                start_string: String sent from detector that will initiate event capture. Defaults to "" i.e. not used.
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
         """
-        logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
-
+        logging.basicConfig()
         self._com_port = com_port
         self._save_dir: str = kwargs.get('save_dir', None)
         self._saved_file_names: list = []
@@ -92,6 +90,11 @@ class DataCollector:
                                    'dead_time': pd.Series(dtype='int'),
                                    'temp': pd.Series(dtype='float')})
         signal.signal(signal.SIGINT, self._signal_handler)
+        # logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
+        # if self._save_dir != "":
+        #     log_path = os.path.join(self._save_dir, "muon_run_log.txt")
+        #     log_file_handler = logging.FileHandler(log_path)
+        #     logger.add
 
     def __enter__(self):
         return self
@@ -157,8 +160,7 @@ class DataCollector:
             # first time filling of frequency array
             self._frequency_array[self._frequency_index] = window_freq
 
-        logging.debug(f"time diff (s) = {diff.total_seconds()} _frequency_array[{self._frequency_index}] = "
-                      f"{window_freq}")
+        logging.info(f"window_time(s): {diff.total_seconds()} frequency: {window_freq}")
 
         self._frequency_index += 1
         if self._frequency_index == len(self._frequency_array):
@@ -170,7 +172,7 @@ class DataCollector:
             self._frequency_array_full = True
             # frequency array (and hence event buffer) is now full so start to capture current frequency median
             self._frequency_median = np.median(self._frequency_array)
-            logging.info(f"Frequency Median = {self._frequency_median}")
+            logging.info(f"buffer_median_frequency: {self._frequency_median}")
 
         if not self._log_all_events and self._frequency_array_full:
             logging.debug(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")
@@ -204,16 +206,22 @@ class DataCollector:
                     self._look_for_start = False
                     logging.info(f"Start string '{self._start_string}' detected - beginning acquisition...")
                 continue
-            else:
+            elif self._ignore_header_size:
                 # strip of the initial header data lines
                 if header_line_count < self._ignore_header_size:
                     header_line_count += 1
                     continue
+                else:
+                    logging.info(f"Specified header size ({self._ignore_header_size}) consumed - "
+                                 f"beginning acquisition...")
+                    self._ignore_header_size = 0
 
             data = data.split()[0:6]
             # if len(data) < 6:
             #     # ignore anything that does not consist of at least 6 fields
             #     continue
+            logging.debug(data)
+
             date_time_now = datetime.now(timezone.utc)
             data = [date_time_now.strftime(self._date_time_format)[:-3]] + data
 
@@ -230,7 +238,6 @@ class DataCollector:
 
             self._buff_index = self._event_counter % self._buff_size
             self._event_counter += 1
-            logging.debug(data)
 
         self._acquisition_ended = True
 

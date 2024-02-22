@@ -2,6 +2,7 @@ import sys
 import glob
 import serial
 from time import sleep
+import logging
 from data_collector import DataCollector
 
 
@@ -60,7 +61,7 @@ def user_interact_part_one():
     for i, port_name in enumerate(available_ports):
         print(f"[{i+1}] {port_name}")
     print("[Q] Quit")
-    option = input("Identify the serial port connected to S detector or Q to quit: ")
+    option = input("Identify which serial port is connected to the S detector or Q to quit: ")
     if not option.isdigit() or abs(int(option)) > len(available_ports):
         sys.exit(0)
     return s_name, available_ports[int(option)-1]
@@ -69,13 +70,29 @@ def user_interact_part_one():
 def user_interact_part_two() -> bool:
     print("Reset the M detector and then the S detector.")
     print("Confirm that the detector displaying 'S---' is the one connected to the serial port.")
-    option = input("Select [C] to continue or [Q] to quit: ")
-    if option.upper() != 'C':
+    option = input("Select [return] to continue or [Q] to quit: ")
+    if option.upper() != '':
         return False
     return True
 
 
+def set_logging():
+    """Set logging configuration."""
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s, %(levelname)s, %(message)s',
+        datefmt='%Y-%m-%d:%H:%M:%S',
+        handlers=[
+            logging.FileHandler('C:/Users/dave/Temp/muon_log.txt'),
+            logging.StreamHandler()
+        ]
+    )
+
+
 def run():
+
+    set_logging()
+    logging.info('Starting up')
     s_name, port_name = user_interact_part_one()
     print(f"{port_name} selected")
 
@@ -86,16 +103,17 @@ def run():
     com_port.stopbits = 1
 
     dc = DataCollector(com_port=com_port,
-                       save_dir=None,
-                       buff_size=100,
-                       window_size=10,
+                       save_dir='C:/Users/dave/Temp',
+                       buff_size=25,
+                       window_size=5,
+                       log_all_events=True,
                        start_string=s_name)
 
     if not user_interact_part_two():
         com_port.close()
         sys.exit(0)
 
-    dc.acquire_data(raw_dump=True)
+    dc.acquire_data(raw_dump=False)
     while not dc.acquisition_ended:
         sleep(0.01)
 
