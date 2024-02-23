@@ -175,7 +175,7 @@ class DataCollectorTest(unittest.TestCase):
                 file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
                 self.assertTrue(os.path.isfile(file_path))
                 df = pd.read_csv(file_path)
-                self.assertEqual(df.shape, (buff_size, 7))
+                self.assertEqual(df.shape, (buff_size, 9))
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check high anomaly is in center of saved event buffer
                 self.assertEqual(df['event'][df.shape[0] // 2], 69)
@@ -183,7 +183,7 @@ class DataCollectorTest(unittest.TestCase):
                 file_path = os.path.join(temp_dir, data_collector.saved_file_names[1])
                 self.assertTrue(os.path.isfile(file_path))
                 df = pd.read_csv(file_path)
-                self.assertEqual(df.shape, (buff_size, 7))
+                self.assertEqual(df.shape, (buff_size, 9))
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check low anomaly is in center of saved event buffer
                 self.assertEqual(df['event'][df.shape[0] // 2], 104)

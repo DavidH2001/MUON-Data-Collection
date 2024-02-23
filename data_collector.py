@@ -88,13 +88,10 @@ class DataCollector:
                                    'adc': pd.Series(dtype='int'),
                                    'sipm': pd.Series(dtype='int'),
                                    'dead_time': pd.Series(dtype='int'),
-                                   'temp': pd.Series(dtype='float')})
+                                   'temp': pd.Series(dtype='float'),
+                                   'win_f': pd.Series(dtype='float'),
+                                   'median_f': pd.Series(dtype='float')})
         signal.signal(signal.SIGINT, self._signal_handler)
-        # logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
-        # if self._save_dir != "":
-        #     log_path = os.path.join(self._save_dir, "muon_run_log.txt")
-        #     log_file_handler = logging.FileHandler(log_path)
-        #     logger.add
 
     def __enter__(self):
         return self
@@ -160,7 +157,8 @@ class DataCollector:
             # first time filling of frequency array
             self._frequency_array[self._frequency_index] = window_freq
 
-        logging.info(f"window_time(s): {diff.total_seconds()} frequency: {window_freq}")
+        logging.info(f"window_time(s): {diff.total_seconds()} frequency[{self._frequency_index}]: {window_freq}")
+        self._buff.loc[cur_buff_index, 'win_f'] = window_freq
 
         self._frequency_index += 1
         if self._frequency_index == len(self._frequency_array):
@@ -173,6 +171,7 @@ class DataCollector:
             # frequency array (and hence event buffer) is now full so start to capture current frequency median
             self._frequency_median = np.median(self._frequency_array)
             logging.info(f"buffer_median_frequency: {self._frequency_median}")
+            self._buff.loc[cur_buff_index, 'median_f'] = self._frequency_median
 
         if not self._log_all_events and self._frequency_array_full:
             logging.debug(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")
@@ -217,6 +216,8 @@ class DataCollector:
                     self._ignore_header_size = 0
 
             data = data.split()[0:6]
+            data.extend(['', ''])
+
             # if len(data) < 6:
             #     # ignore anything that does not consist of at least 6 fields
             #     continue
