@@ -147,8 +147,9 @@ class DataCollector:
         """With a new window set of data available update the window event frequency history and look for anomalies."""
         window_data = self._buff.iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
         window_data.iloc[:, 0] = pd.to_datetime(window_data.iloc[:, 0], format=self._date_time_format)
-        diff = window_data.iloc[-1, 0] - window_data.iloc[0, 0]
-        window_freq = len(window_data) / diff.total_seconds()
+        windows_time_diff = window_data.iloc[-1, 0] - window_data.iloc[0, 0]
+        arduino_time_diff = (int(window_data.iloc[-1, 2]) - int(window_data.iloc[0, 2])) / 1000.0
+        window_freq = len(window_data) / windows_time_diff.total_seconds()
         if self._frequency_array_full:
             # update buffer by removing the oldest window frequency and adding latest frequency
             self._frequency_array = np.roll(self._frequency_array, -1)
@@ -157,7 +158,8 @@ class DataCollector:
             # first time filling of frequency array
             self._frequency_array[self._frequency_index] = window_freq
 
-        logging.info(f"window_time(s): {diff.total_seconds()} frequency[{self._frequency_index}]: {window_freq}")
+        logging.info(f"window time (s) = {windows_time_diff.total_seconds()} arduino time (s) = {arduino_time_diff} "
+                     f"frequency[{self._frequency_index}] = {window_freq}")
         self._buff.loc[cur_buff_index, 'win_f'] = window_freq
 
         self._frequency_index += 1
