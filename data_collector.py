@@ -163,15 +163,18 @@ class DataCollector:
         self._frequency_index += 1
         if self._frequency_index == len(self._frequency_array):
             # end of frequency array reached
-            if self._log_all_events:
-                # save buffer anyway if we are not looking for anomalies
-                self._save_buff()
+            # if self._log_all_events:
+            #     # save buffer anyway if we are not looking for anomalies
+            #     self._save_buff()
             self._frequency_index = 0
             self._frequency_array_full = True
             # frequency array (and hence event buffer) is now full so start to capture current frequency median
             self._frequency_median = np.median(self._frequency_array)
             logging.info(f"buffer_median_frequency: {self._frequency_median}")
             self._buff.loc[cur_buff_index, 'median_f'] = self._frequency_median
+            if self._log_all_events:
+                # save buffer anyway if we are not looking for anomalies
+                self._save_buff()
 
         if not self._log_all_events and self._frequency_array_full:
             logging.debug(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")

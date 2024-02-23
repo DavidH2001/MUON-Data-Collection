@@ -9,17 +9,32 @@ import os
 import unittest
 from time import sleep
 import tempfile
+
+import numpy as np
 import pandas as pd
 import codecs
+import logging
 from data_collector import DataCollector
 from unittest.mock import Mock
 
+
+def set_logging():
+    """Set logging configuration."""
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s, %(levelname)s, %(message)s',
+        datefmt='%Y-%m-%d:%H:%M:%S',
+        handlers=[
+            logging.FileHandler('C:/Users/dave/Temp/muon_log.txt'),
+            logging.StreamHandler()
+        ]
+    )
 
 class DataCollectorTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        pass
+        set_logging()
 
     def setUp(self):
         """The test setup is responsible for setting up a mocked serial comm port that will be passed to the
@@ -212,7 +227,19 @@ class DataCollectorTest(unittest.TestCase):
 
                 self.assertEqual(len(data_collector.saved_file_names), 4)
                 file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
+                df = pd.read_csv(file_path)
                 self.assertTrue(os.path.isfile(file_path))
+                # confirm we have 3 window frequencies at required positions
+                states = df['win_f'].notna()
+                self.assertTrue(np.array_equal(np.where(states)[0], np.array([9, 19, 29])))
+                win_f_array = df[df['win_f'].notna()]['win_f'].values
+                self.assertEqual(win_f_array.size, 3)
+                # confirm we have 1 median frequency at required position and check correct against window frequencies
+                states = df['median_f'].notna()
+                self.assertTrue(np.array_equal(np.where(states)[0], np.array([29])))
+                median_f_array = df[df['median_f'].notna()]['median_f'].values
+                self.assertEqual(median_f_array.size, 1)
+                self.assertEqual(np.median(win_f_array), median_f_array[0])
 
     def test_data_collector_start_string(self):
         """Test start acquisition trigger string."""
