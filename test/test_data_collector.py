@@ -38,8 +38,8 @@ class DataCollectorTest(unittest.TestCase):
 
     def setUp(self):
         """The test setup is responsible for setting up a mocked serial comm port that will be passed to the
-        DataCollector instance constructor. The mocked comm port uses _data_func() to feed the test event data (held
-        in a CSV file) to the collector one line at a time."""
+           DataCollector instance constructor. The mocked comm port uses _data_func() to feed the test event
+           data (held in a CSV file) to the collector one line at a time."""
 
         def _data_func():
             """Embedded function used to handle the serving up of the serial data."""
@@ -166,7 +166,7 @@ class DataCollectorTest(unittest.TestCase):
             self.assertTrue(f4[2] != f3[2])
 
     def test_data_collector_event_anomalies(self):
-        """Test logging of event anomalies to file."""
+        """Test logging of event anomalies to file. test data contains a single high and low event anomaly."""
         #temp_dir = 'c:/Users/dave/Temp'
         # if os.path.isfile(data_file):
         #     os.remove(data_file)
@@ -187,7 +187,7 @@ class DataCollectorTest(unittest.TestCase):
                     sleep(0.01)
 
                 self.assertEqual(len(data_collector.saved_file_names), 2)
-                file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
+                file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
                 self.assertTrue(os.path.isfile(file_path))
                 df = pd.read_csv(file_path)
                 self.assertEqual(df.shape, (buff_size, 9))
@@ -195,7 +195,7 @@ class DataCollectorTest(unittest.TestCase):
                 # check high anomaly is in center of saved event buffer
                 self.assertEqual(df['event'][df.shape[0] // 2], 69)
 
-                file_path = os.path.join(temp_dir, data_collector.saved_file_names[1])
+                file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[1])
                 self.assertTrue(os.path.isfile(file_path))
                 df = pd.read_csv(file_path)
                 self.assertEqual(df.shape, (buff_size, 9))
@@ -209,7 +209,7 @@ class DataCollectorTest(unittest.TestCase):
         # if os.path.isfile(data_file):
         #     os.remove(data_file)
 
-        if True:  # with tempfile.TemporaryDir() as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 10
             buff_size = 30
             with DataCollector(self.mock_com_port,
@@ -225,8 +225,10 @@ class DataCollectorTest(unittest.TestCase):
                 while not data_collector.acquisition_ended:
                     sleep(0.01)
 
-                self.assertEqual(len(data_collector.saved_file_names), 4)
-                file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
+                # We should have 4 log all buffers + 1 low anomaly buffer. High anomaly is spread out over larger
+                # window size and is thus not seen.
+                self.assertEqual(len(data_collector.saved_file_names), 5)
+                file_path = os.path.join(temp_dir, "all", data_collector.saved_file_names[0])
                 df = pd.read_csv(file_path)
                 self.assertTrue(os.path.isfile(file_path))
                 # confirm we have 3 window frequencies at required positions
@@ -263,7 +265,7 @@ class DataCollectorTest(unittest.TestCase):
                 while not data_collector.acquisition_ended:
                     sleep(0.01)
 
-                file_path = os.path.join(temp_dir, data_collector.saved_file_names[0])
+                file_path = os.path.join(temp_dir, "all", data_collector.saved_file_names[0])
                 self.assertTrue(os.path.isfile(file_path))
                 df = pd.read_csv(file_path, dtype={0: str, 1: str}).iloc[:, 0:7]
                 self.assertEqual(df['event'][0], str(event_index+2))

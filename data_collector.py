@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jul 18 16:26:17 2022
 
-@author: dave
-
-Detetcor will automatically reset when this program connects with it.
 """
 import os.path
 import sys
@@ -25,14 +21,16 @@ class DataCollector:
     (high/low) anomalies. When an anomaly is detected the event data buffer is saved to a file.
 
     The maximum events that can be held by the collector is defined by buffer size. The buffer is split into a
-    number of sub buffers (windows) that are used to define the event frequency at their time of acquisition. When the
-    buffer is full the corresponding logged window frequencies are used to determine a baseline (median) frequency.
-    Each frequency is stored in array that has the same size as the number of windows spanning the buffer.
-    This baseline frequency is continuously updated to allow for any drift in the detector system.The window frequency
-    is also used to detect anomalies by comparing it against the current baseline.
+    number of sub buffers (windows) that are used to define the current event frequency i.e. time span of window
+    divided by the number of events it holds. A frequency array is used to log the corresponding window frequencies for
+    the whole buffer.
+
+    When the buffer is full the logged frequencies are used to determine a baseline (median) frequency for the whole
+    buffer. This baseline frequency is continuously updated to allow for any drift in the detector system.
 
     Anomaly detection starts after the buffer has been initially filled with events using its central window. This
-    enables events preceding and following an anomaly to be logged.
+    enables events preceding and following an anomaly to be logged. Detection of an anomaly is achieved by comparing
+    the window frequency against the current baseline frequency.
 
     The Saved buffer CSV files are not ordered chronologically. When loading a CSV file (into a pandas data frame for
     example) you will need to reorder the rows e.g., using event number."""
@@ -49,7 +47,8 @@ class DataCollector:
                buff_size: The number of events to be held in the buffer. This should be set as an odd multiple of
                     window_size.
                window_size: The number of events used by the anomaly window.
-               anomaly_detect_fraction: Optional fraction of base frequency used to trigger anomaly. Defaults to 0.2.
+               anomaly_detect_factor: Optional factor of base frequency used to trigger anomaly. Ignored if set to 0.0.
+                    Defaults to 2.0.
                log_all_events: Set to True to log all events to file(s). Defaults to False.
                ignore_header_size: Number of initial data lines to be ignored that represent the header. Defaults to 6.
                start_string: String sent from detector that will initiate event capture. Defaults to "" i.e. not used.
@@ -71,7 +70,7 @@ class DataCollector:
         self._frequency_median: float = 0.0
         self._frequency_index: int = 0
         self._frequency_array_full: bool = False
-        self._anomaly_detect_fraction = kwargs.get("anomaly_detect_fraction", 0.2)
+        self._anomaly_detect_factor = kwargs.get("anomaly_detect_factor", 2.0)
         self._log_all_events: bool = kwargs.get('log_all_events', '')
         self._start_string: bool = kwargs.get('start_string', '')
         if self._start_string != '':
@@ -126,19 +125,23 @@ class DataCollector:
             if name in str(line):
                 break
 
-    def _save_buff(self):
+    def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""
         self._saved_file_names.append(self._buff['comp_time'][0].strftime("%Y%m%d-%H%M%S.csv"))
-        file_path = os.path.join(self._save_dir, self._saved_file_names[-1])
+        file_dir = os.path.join(self._save_dir, sub_dir)
+        if not os.path.isdir(file_dir):
+            logging.info(f"Creating directory {file_dir}")
+            os.mkdir(file_dir)
+        file_path = os.path.join(file_dir, self._saved_file_names[-1])
         logging.info(f"Saving buffer to file {file_path}")
         self._buff.to_csv(file_path, index=False)
 
     def _check_for_anomaly(self, frequency) -> None:
         """Check for event anomaly."""
-        if frequency > (1 + self._anomaly_detect_fraction) * self._frequency_median:
+        if frequency > self._frequency_median * self._anomaly_detect_factor:
             logging.info("HIGH ANOMALY DETECTED!!!")
             return True
-        if frequency < (1 - self._anomaly_detect_fraction) * self._frequency_median:
+        if frequency < self._frequency_median / self._anomaly_detect_factor:
             logging.info("LOW ANOMALY DETECTED!!!")
             return True
         return False
@@ -159,7 +162,7 @@ class DataCollector:
             self._frequency_array[self._frequency_index] = window_freq
 
         logging.info(f"window time (s) = {windows_time_diff.total_seconds()} arduino time (s) = {arduino_time_diff} "
-                     f"frequency[{self._frequency_index}] = {window_freq}")
+                     f"window frequency[{self._frequency_index}] = {window_freq}")
         self._buff.loc[cur_buff_index, 'win_f'] = window_freq
 
         self._frequency_index += 1
@@ -172,17 +175,18 @@ class DataCollector:
             self._frequency_array_full = True
             # frequency array (and hence event buffer) is now full so start to capture current frequency median
             self._frequency_median = np.median(self._frequency_array)
-            logging.info(f"buffer_median_frequency: {self._frequency_median}")
+            logging.info(f"buffer median frequency: {self._frequency_median}")
             self._buff.loc[cur_buff_index, 'median_f'] = self._frequency_median
             if self._log_all_events:
                 # save buffer anyway if we are not looking for anomalies
-                self._save_buff()
+                self._save_buff("all")
 
-        if not self._log_all_events and self._frequency_array_full:
-            logging.debug(f"CHECKING mid freq: {self.frequency_array[self._mid_frequency_index]}")
+        if self._anomaly_detect_factor != 0.0 and self._frequency_array_full:
+            logging.debug(f"Checking mid buffer[{self._mid_frequency_index}] window freq: "
+                          f"{self.frequency_array[self._mid_frequency_index]}")
             if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
                 if self._save_dir:
-                    self._save_buff()
+                    self._save_buff("anomaly")
 
     def _acquire_data(self, raw_dump: bool) -> None:
         """

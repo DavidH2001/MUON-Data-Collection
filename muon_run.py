@@ -103,9 +103,9 @@ def run():
     com_port.stopbits = 1
 
     dc = DataCollector(com_port=com_port,
-                       save_dir='C:/Users/dave/Temp',
-                       buff_size=25,
-                       window_size=5,
+                       save_dir='C:/Users/dave/Temp/muon_data',
+                       buff_size=200,
+                       window_size=10,
                        log_all_events=True,
                        start_string=s_name)
 
