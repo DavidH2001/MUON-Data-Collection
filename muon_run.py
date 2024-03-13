@@ -83,7 +83,7 @@ def set_logging():
         format='%(asctime)s, %(levelname)s, %(message)s',
         datefmt='%Y-%m-%d:%H:%M:%S',
         handlers=[
-            logging.FileHandler('C:/Users/dave/Temp/muon_log.txt'),
+            logging.FileHandler('C:/Users/dave/Temp/muon_data/muon_log.txt'),
             logging.StreamHandler()
         ]
     )

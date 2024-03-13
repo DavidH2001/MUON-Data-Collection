@@ -1,4 +1,4 @@
-import numpy as np
+import os.path
 import pandas as pd
 from os import listdir
 from os.path import isfile, join
@@ -7,8 +7,11 @@ import matplotlib.pyplot as plt
 
 date_time_format: str = "%Y-%m-%d %H:%M:%S.%f"
 
-def get_data(file_list):
-    start_times = []
+def get_data(directory):
+
+    file_list = [file for file in listdir(directory) if file.endswith('csv')]
+
+    start_indices = []
     for i, file in enumerate(file_list):
         print(file)
         df = pd.read_csv(join(directory, file))
@@ -24,21 +27,19 @@ def get_data(file_list):
     win_f_df = win_f_df.sort_values(by='time', ignore_index=True)
     median_f_df['time'] = pd.to_datetime(median_f_df['comp_time'], format=date_time_format)
     median_f_df = median_f_df.sort_values(by='time', ignore_index=True)
-    #start_times.append(win_f_df.at[0, 'time'])
 
     return win_f_df, median_f_df
 
+
 fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
-directory = 'C:/Users/dave/Temp/muon_data/all'
-file_list = [file for file in listdir(directory) if file.endswith('csv')]
-win_f_df, median_f_df, _ = get_data(file_list)
+root_directory = 'C:/Users/dave/Temp/muon_data_1203'
+
+win_f_df, median_f_df = get_data(os.path.join(root_directory, "all"))
 ax1.plot(win_f_df['time'], win_f_df['win_f'], 'g-')
 ax1.plot(win_f_df['time'], win_f_df['median_f'], 'r+')
 ax1.grid()
 
-directory = 'C:/Users/dave/Temp/muon_data/anomaly'
-file_list = [file for file in listdir(directory) if file.endswith('csv')]
-win_f_df, median_f_df, start_times = get_data(file_list)
+win_f_df, median_f_df = get_data(os.path.join(root_directory, "anomaly"))
 ax2.plot(win_f_df['time'], win_f_df['win_f'], 'g-')
 #ax2.plot(start_times, [0]*len(start_times), 'go')
 ax2.grid()
