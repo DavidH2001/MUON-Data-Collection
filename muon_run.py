@@ -31,30 +31,12 @@ def serial_ports():
     return result
 
 
-# def select_port():
-#     """Select detector communication port.
-#
-#     :return: port_name.
-#     """
-#     #print('Available serial ports:\n')
-#     #print("[Q] Quit")
-#     #for i in range(len(port_list)):
-#     #    print('[' + str(i+1)+'] ' + str(port_list[i]))
-#     port = input("Select the port connected to the Arduino: ")
-#     port_name = str(port_list[int(port)-1])
-#     print("The selected port is: " + port_name +'\n')
-#     return port_name
-
 def user_interact_part_one():
     print(f"Host platform: {sys.platform}")
     print("Connect the S detector to a serial port on the host.")
     s_name = input("Enter the name of your S detector (if set) else select [return] to continue: ")
     if s_name != "":
         print(f"Acquisition will only start when the host detects '{s_name}' from connected detector.")
-
-    # option = input("Select [C] to continue or [Q] to : ")
-    # if option.upper() != 'C':
-    #     sys.exit(0)
 
     print('\nAvailable serial ports:')
     available_ports = serial_ports()
