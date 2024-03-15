@@ -22,7 +22,13 @@ be able to obtain any updates quickly and make changes to the code via a *Pull R
 
 ## Running
 
-Move to the installed project root directory and run:
+### Configuration
+Before you can run the data collector you will need to set up a number of parameters in the configuration file 
+*config.json* found in the project folder:
+* "location" - string defining your unique location.
+* "root_dir" - string defining the directory where your event files will be saved.
+
+### Execution
 
 ```
 > python muon_run.py

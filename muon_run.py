@@ -1,5 +1,6 @@
 import sys
 import glob
+import json
 import serial
 from time import sleep
 import logging
@@ -41,12 +42,12 @@ def user_interact_part_one():
     print('\nAvailable serial ports:')
     available_ports = serial_ports()
     for i, port_name in enumerate(available_ports):
-        print(f"[{i+1}] {port_name}")
+        print(f"[{i + 1}] {port_name}")
     print("[Q] Quit")
     option = input("Identify which serial port is connected to the S detector or Q to quit: ")
     if not option.isdigit() or abs(int(option)) > len(available_ports):
         sys.exit(0)
-    return s_name, available_ports[int(option)-1]
+    return s_name, available_ports[int(option) - 1]
 
 
 def user_interact_part_two() -> bool:
@@ -71,10 +72,24 @@ def set_logging():
     )
 
 
-def run():
+def _check_config(config):
+    """Check the contents of the configuration file."""
+    if ("event_files" not in config or "root_directory" not in config["event_files"] or
+            config["event_files"]["root_directory"] == ""):
+        raise ValueError("Select the required root directly for logging event files in config.json.")
 
+
+def run():
+    """Main"""
+    # get configuration information
+    with open("config.json") as json_data_file:
+        config = json.load(json_data_file)
+    _check_config(config)
+
+    # setup logging
     set_logging()
     logging.info('Starting up')
+
     s_name, port_name = user_interact_part_one()
     print(f"{port_name} selected")
 
@@ -85,7 +100,7 @@ def run():
     com_port.stopbits = 1
 
     dc = DataCollector(com_port=com_port,
-                       save_dir='C:/Users/dave/Temp/muon_data',
+                       save_dir=config['event_files']['root_directory'],
                        buff_size=200,
                        window_size=10,
                        log_all_events=True,
@@ -102,4 +117,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
