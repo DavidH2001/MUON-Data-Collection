@@ -61,14 +61,14 @@ def user_interact_part_two() -> bool:
     return True
 
 
-def set_logging():
+def set_logging(root_dir):
     """Set logging configuration."""
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s, %(levelname)s, %(message)s',
         datefmt='%Y-%m-%d:%H:%M:%S',
         handlers=[
-            logging.FileHandler('C:/Users/dave/Temp/muon_data/muon_log.txt'),
+            logging.FileHandler(os.path.join(root_dir, "muon_log.txt")),
             logging.StreamHandler()
         ]
     )
@@ -108,7 +108,7 @@ def run():
     com_port.stopbits = 1
 
     dc = DataCollector(com_port=com_port,
-                       save_dir=config['event_files']['root_directory'],
+                       save_dir=config['event_files']['root_dir'],
                        buff_size=200,
                        window_size=10,
                        log_all_events=True,
