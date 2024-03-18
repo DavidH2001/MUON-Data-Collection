@@ -93,9 +93,10 @@ def run():
     with open("config.json") as json_data_file:
         config = json.load(json_data_file)
     _check_config(config)
+    root_dir = config['event_files']['root_dir']
 
     # setup logging
-    set_logging()
+    set_logging(root_dir)
     logging.info('Starting up')
 
     s_name, port_name = user_interact_part_one()
@@ -108,7 +109,7 @@ def run():
     com_port.stopbits = 1
 
     dc = DataCollector(com_port=com_port,
-                       save_dir=config['event_files']['root_dir'],
+                       save_dir=root_dir,
                        buff_size=200,
                        window_size=10,
                        log_all_events=True,
