@@ -79,8 +79,8 @@ def _check_config(config):
     if ("event_files" not in config or "root_dir" not in config["event_files"] or
             config["event_files"]["root_dir"] == ""):
         raise ValueError("Please edit config.json to define the required root directly for logging event files.")
-    if not os.path.exists(config["event_files"]["root_dir"]):
-        raise ValueError(f"The root_dir {config['event_files']['root_dir']} defined in config.json does not exist.")
+    if not os.path.exists(os.path.expanduser(config["event_files"]["root_dir"])):
+        raise ValueError(f"The root_dir '{config['event_files']['root_dir']}' defined in config.json does not exist.")
     if ("user" not in config or "latitude" not in config["user"] or "longitude" not in config["user"] or
             (math.isclose(config["user"]["latitude"], 0.0) and math.isclose(config["user"]["longitude"], 0.0) or not
                 isinstance(config["user"]["latitude"], float) or not isinstance(config["user"]["longitude"], float))):

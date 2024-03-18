@@ -25,8 +25,9 @@ be able to obtain any updates quickly and make changes to the code via a *Pull R
 ### Configuration
 Before you can run the data collector you will need to set up a number of parameters in the configuration file 
 *config.json* found in the project folder:
-* "location" - string defining your unique location.
-* "root_dir" - string defining the directory where your event files will be saved.
+* "user latitude" - float value representing the latitude of the user detectors.
+* "user longitude" - float value representing the longitude of the user detectors.
+* "event_files root_dir" - string defining an existing directory where your event files will be saved.
 
 ### Execution
 

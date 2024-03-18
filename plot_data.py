@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 date_time_format: str = "%Y-%m-%d %H:%M:%S.%f"
 
+
 def get_data(directory):
 
     file_list = [file for file in listdir(directory) if file.endswith('csv')]

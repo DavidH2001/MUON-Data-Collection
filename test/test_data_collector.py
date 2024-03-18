@@ -110,7 +110,7 @@ class DataCollectorTest(unittest.TestCase):
         config['event_files']['root_dir'] = "a:/b/c"
         with self.assertRaises(ValueError) as context:
             _check_config(config)
-        self.assertTrue(f"The root_dir {config['event_files']['root_dir']} defined in config.json does not exist."
+        self.assertTrue(f"The root_dir '{config['event_files']['root_dir']}' defined in config.json does not exist."
                         in str(context.exception))
 
         config['event_files']['root_dir'] = "c:/"
