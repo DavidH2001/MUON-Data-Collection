@@ -9,12 +9,13 @@ import os
 import unittest
 from time import sleep
 import tempfile
-
+import json
 import numpy as np
 import pandas as pd
 import codecs
 import logging
 from data_collector import DataCollector
+from muon_run import _check_config
 from unittest.mock import Mock
 
 
@@ -29,6 +30,7 @@ def set_logging():
             logging.StreamHandler()
         ]
     )
+
 
 class DataCollectorTest(unittest.TestCase):
 
@@ -85,6 +87,41 @@ class DataCollectorTest(unittest.TestCase):
         mock_serial = Mock()
         DataCollector.serial = mock_serial
         mock_serial.Serial.return_value = self.mock_com_port
+
+    def test_config(self):
+        """Test configuration file access."""
+        with open("../config.json") as json_data_file:
+            config = json.load(json_data_file)
+
+        self.assertTrue("event_files" in config)
+        self.assertTrue("root_dir" in config["event_files"])
+        self.assertTrue("user" in config)
+        self.assertTrue("latitude" in config["user"])
+        self.assertTrue("longitude" in config["user"])
+        config['event_files']['root_dir'] = ""
+        config['user']['latitude'] = 0.0
+        config['user']['longitude'] = 0.0
+
+        with self.assertRaises(ValueError) as context:
+            _check_config(config)
+        self.assertTrue("Please edit config.json to define the required root directly for logging event files."
+                        in str(context.exception))
+
+        config['event_files']['root_dir'] = "a:/b/c"
+        with self.assertRaises(ValueError) as context:
+            _check_config(config)
+        self.assertTrue(f"The root_dir {config['event_files']['root_dir']} defined in config.json does not exist."
+                        in str(context.exception))
+
+        config['event_files']['root_dir'] = "c:/"
+        with self.assertRaises(ValueError) as context:
+            _check_config(config)
+        self.assertTrue("Please edit config.json to define the user latitude and longitude decimal values."
+                        in str(context.exception))
+
+        config['user']['latitude'] = 50.815
+        config['user']['longitude'] = -1.224
+        _check_config(config)
 
     def test_data_collector_params(self):
         """Test data collector argument parameters"""

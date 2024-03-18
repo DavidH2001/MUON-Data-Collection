@@ -1,6 +1,8 @@
 {
     "user": {
-        "location": ""
+        "name": "",
+        "latitude": 0.0,
+        "longitude": 0.0
     },
     "event_files": {
         "root_dir": ""
