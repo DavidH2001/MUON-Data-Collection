@@ -104,7 +104,7 @@ class DataCollectorTest(unittest.TestCase):
 
         with self.assertRaises(ValueError) as context:
             _check_config(config)
-        self.assertTrue("Please edit config.json to define the required root directly for logging event files."
+        self.assertTrue("Please edit config.json to define the required root directory for logging event files."
                         in str(context.exception))
 
         config['event_files']['root_dir'] = "a:/b/c"
