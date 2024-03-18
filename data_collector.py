@@ -149,7 +149,8 @@ class DataCollector:
     def _update_frequency_history(self, cur_buff_index: int) -> None:
         """With a new window set of data available update the window event frequency history and look for anomalies."""
         window_data = self._buff.iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
-        window_data.loc[:, 'comp_time'] = pd.to_datetime(window_data.loc[:, 'comp_time'], format=self._date_time_format)
+        window_data.loc[window_data.index[:], 'comp_time'] = (
+            pd.to_datetime(window_data.loc[window_data.index[:], 'comp_time'], format=self._date_time_format))
         windows_time_diff = (window_data.loc[window_data.index[-1], 'comp_time'] -
                              window_data.loc[window_data.index[0], 'comp_time'])
         arduino_time_diff = (int(window_data.loc[window_data.index[-1], 'arduino_time']) -

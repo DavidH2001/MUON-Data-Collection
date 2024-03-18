@@ -98,7 +98,7 @@ def run():
 
     # setup logging
     set_logging(root_dir)
-    logging.info('Starting up')
+    logging.info('Starting up...')
 
     s_name, port_name = user_interact_part_one()
     print(f"{port_name} selected")
@@ -108,11 +108,15 @@ def run():
     com_port.bytesize = 8
     com_port.parity = 'N'
     com_port.stopbits = 1
+    buff_size = 200
+    window_size = 10
 
+    logging.info(f"buff size={buff_size}, window size={window_size}")
+    logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']} ")
     dc = DataCollector(com_port=com_port,
                        save_dir=root_dir,
-                       buff_size=200,
-                       window_size=10,
+                       buff_size=buff_size,
+                       window_size=window_size,
                        log_all_events=True,
                        start_string=s_name)
 
