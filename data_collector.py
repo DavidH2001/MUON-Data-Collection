@@ -127,7 +127,7 @@ class DataCollector:
 
     def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""
-        self._saved_file_names.append(self._buff['comp_time'][0].strftime("%Y%m%d-%H%M%S.csv"))
+        self._saved_file_names.append(pd.to_datetime(self._buff['comp_time'][0]).strftime("%Y%m%d-%H%M%S.csv"))
         file_dir = os.path.join(self._save_dir, sub_dir)
         if not os.path.isdir(file_dir):
             logging.info(f"Creating directory {file_dir}")
