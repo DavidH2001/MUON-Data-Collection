@@ -86,6 +86,15 @@ def _check_config(config):
             (math.isclose(config["user"]["latitude"], 0.0) and math.isclose(config["user"]["longitude"], 0.0) or not
                 isinstance(config["user"]["latitude"], float) or not isinstance(config["user"]["longitude"], float))):
         raise ValueError("Please edit config.json to define the user latitude and longitude decimal values.")
+    if "system" not in config or not isinstance(config["system"], dict):
+        raise ValueError("Invalid config.json file detected.")
+    if "buff_size" not in config["system"] or not isinstance(config["system"]["buff_size"], int):
+        raise ValueError("The system buff_size parameter in config.json is missing or defined with incorrect type.")
+    if "window_size" not in config["system"] or not isinstance(config["system"]["window_size"], int):
+        raise ValueError("The system window_size parameter in config.json is missing or defined with incorrect type.")
+    if "anomaly_threshold" not in config["system"] or not isinstance(config["system"]["anomaly_threshold"], float):
+        raise ValueError("The system anomaly_threshold parameter in config.json is missing or defined with incorrect "
+                         "type.")
 
 
 def run():
@@ -108,15 +117,19 @@ def run():
     com_port.bytesize = 8
     com_port.parity = 'N'
     com_port.stopbits = 1
-    buff_size = 200
-    window_size = 10
 
-    logging.info(f"buff size={buff_size}, window size={window_size}")
-    logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']} ")
+    buff_size = config.get("system", None).get("buff_size", 200)
+    window_size = config.get("system", None).get("buff_size", 10)
+    anomaly_threshold = config.get("system", None).get("anomaly_threshold", 2.0)
+
+    logging.info(f"buff_size={buff_size}, window_size={window_size},anomaly_threshold={anomaly_threshold}")
+    logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
+
     dc = DataCollector(com_port=com_port,
                        save_dir=root_dir,
                        buff_size=buff_size,
                        window_size=window_size,
+                       anomaly_threshold=anomaly_threshold,
                        log_all_events=True,
                        start_string=s_name)
 

@@ -47,7 +47,7 @@ class DataCollector:
                buff_size: The number of events to be held in the buffer. This should be set as an odd multiple of
                     window_size.
                window_size: The number of events used by the anomaly window.
-               anomaly_detect_factor: Optional factor of base frequency used to trigger anomaly. Ignored if set to 0.0.
+               anomaly_threshold: Optional factor of base frequency used to trigger anomaly. Ignored if set to 0.0.
                     Defaults to 2.0.
                log_all_events: Set to True to log all events to file(s). Defaults to False.
                ignore_header_size: Number of initial data lines to be ignored that represent the header. Defaults to 6.
@@ -70,7 +70,7 @@ class DataCollector:
         self._frequency_median: float = 0.0
         self._frequency_index: int = 0
         self._frequency_array_full: bool = False
-        self._anomaly_detect_factor = kwargs.get("anomaly_detect_factor", 2.0)
+        self._anomaly_threshold = kwargs.get("anomaly_threshold", 2.0)
         self._log_all_events: bool = kwargs.get('log_all_events', '')
         self._start_string: bool = kwargs.get('start_string', '')
         if self._start_string != '':
@@ -138,10 +138,10 @@ class DataCollector:
 
     def _check_for_anomaly(self, frequency) -> None:
         """Check for event anomaly."""
-        if frequency > self._frequency_median * self._anomaly_detect_factor:
+        if frequency > self._frequency_median * self._anomaly_threshold:
             logging.info("HIGH ANOMALY DETECTED!!!")
             return True
-        if frequency < self._frequency_median / self._anomaly_detect_factor:
+        if frequency < self._frequency_median / self._anomaly_threshold:
             logging.info("LOW ANOMALY DETECTED!!!")
             return True
         return False
@@ -184,7 +184,7 @@ class DataCollector:
                 # save buffer anyway if we are not looking for anomalies
                 self._save_buff("all")
 
-        if self._anomaly_detect_factor != 0.0 and self._frequency_array_full:
+        if self._anomaly_threshold != 0.0 and self._frequency_array_full:
             logging.debug(f"Checking mid buffer[{self._mid_frequency_index}] window freq: "
                           f"{self.frequency_array[self._mid_frequency_index]}")
             if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
