@@ -5,12 +5,12 @@
         "longitude": 10.0
     },
     "event_files": {
-        "root_dir": "~"
+        "root_dir": "~/muon_data"
     },
     "system": {
         "buff_size": 25,
         "window_size": 5,
         "anomaly_threshold": 2.0,
-        "logging_level": "INFO"
+        "logging_level": "DEBUG"
     }
 }

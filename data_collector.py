@@ -240,11 +240,8 @@ class DataCollector:
 
             if len(self._buff) < self._buff_size:
                 # fill buffer for first time
-                try:
-                    self._buff.loc[len(self._buff)] = data
-                except ValueError as e:
-                    print(f"Failed with '{str(e)}' - trying again...")
-                    continue
+                print(data)
+                self._buff.loc[len(self._buff)] = data
             else:
                 # Repeat filling of buffer. Note start from the beginning overwriting the oldest values.
                 self._buff.loc[self._buff_index] = data

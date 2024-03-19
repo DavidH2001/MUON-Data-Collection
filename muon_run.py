@@ -105,13 +105,13 @@ def run():
     _check_config(config)
     root_dir = os.path.expanduser(config['event_files']['root_dir'])
 
+    s_name, port_name = user_interact_part_one()
+    print(f"{port_name} selected")
+
     # setup logging
     log_level = config.get("system", None).get("logging_level", "INFO")
     set_logging(root_dir, log_level)
-    logging.info('Starting up...')
-
-    s_name, port_name = user_interact_part_one()
-    print(f"{port_name} selected")
+    logging.info(f'Starting up using logging level {log_level}...')
 
     com_port = serial.Serial(port_name)
     com_port.baudrate = 9600
