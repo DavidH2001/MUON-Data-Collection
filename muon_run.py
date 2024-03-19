@@ -123,9 +123,6 @@ def run():
     window_size = config.get("system", None).get("window_size", 10)
     anomaly_threshold = config.get("system", None).get("anomaly_threshold", 2.0)
 
-    logging.info(f"buff_size={buff_size}, window_size={window_size},anomaly_threshold={anomaly_threshold}")
-    logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
-
     dc = DataCollector(com_port=com_port,
                        save_dir=root_dir,
                        buff_size=buff_size,
@@ -137,6 +134,9 @@ def run():
     if not user_interact_part_two():
         com_port.close()
         sys.exit(0)
+
+    logging.info(f"buff_size={buff_size}, window_size={window_size},anomaly_threshold={anomaly_threshold}")
+    logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
 
     dc.acquire_data(raw_dump=False)
     while not dc.acquisition_ended:
