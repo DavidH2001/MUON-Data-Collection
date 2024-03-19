@@ -10,6 +10,7 @@
     "system": {
         "buff_size": 25,
         "window_size": 5,
-        "anomaly_threshold": 2.0
+        "anomaly_threshold": 2.0,
+        "logging_level": "INFO"
     }
 }

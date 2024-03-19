@@ -61,10 +61,10 @@ def user_interact_part_two() -> bool:
     return True
 
 
-def set_logging(root_dir):
+def set_logging(root_dir: str, level: str) -> None:
     """Set logging configuration."""
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.DEBUG if level.upper() == "DEBUG" else logging.INFO,
         format='%(asctime)s, %(levelname)s, %(message)s',
         datefmt='%Y-%m-%d:%H:%M:%S',
         handlers=[
@@ -106,7 +106,8 @@ def run():
     root_dir = os.path.expanduser(config['event_files']['root_dir'])
 
     # setup logging
-    set_logging(root_dir)
+    log_level = config.get("system", None).get("logging_level", "INFO")
+    set_logging(root_dir, log_level)
     logging.info('Starting up...')
 
     s_name, port_name = user_interact_part_one()
