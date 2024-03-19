@@ -1,6 +1,6 @@
 {
     "user": {
-        "name": "",
+        "name": "Dave",
         "latitude": 10.0,
         "longitude": 10.0
     },
@@ -8,8 +8,8 @@
         "root_dir": "~"
     },
     "system": {
-        "buff_size": 200,
-        "window_size": 10,
+        "buff_size": 25,
+        "window_size": 5,
         "anomaly_threshold": 2.0
     }
 }

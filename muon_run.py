@@ -119,7 +119,7 @@ def run():
     com_port.stopbits = 1
 
     buff_size = config.get("system", None).get("buff_size", 200)
-    window_size = config.get("system", None).get("buff_size", 10)
+    window_size = config.get("system", None).get("window_size", 10)
     anomaly_threshold = config.get("system", None).get("anomaly_threshold", 2.0)
 
     logging.info(f"buff_size={buff_size}, window_size={window_size},anomaly_threshold={anomaly_threshold}")
