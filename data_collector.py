@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
 
+date_time_format: str = "%Y-%m-%d %H:%M:%S.%f"
+
 
 class DataCollector:
     """Data collector object class.
@@ -134,10 +136,12 @@ class DataCollector:
             os.mkdir(file_dir)
         file_path = os.path.join(file_dir, self._saved_file_names[-1])
         logging.info(f"Saving buffer to file {file_path}")
-        self._buff.to_csv(file_path, index=False)
+        self._buff.to_csv(file_path, index=False, date_format=date_time_format)
 
     def _check_for_anomaly(self, frequency) -> None:
         """Check for event anomaly."""
+        logging.debug(f"Checking mid buff[{self._mid_frequency_index}] window freq: "
+                      f"{frequency} against median frequency {self._frequency_median}")
         if frequency > self._frequency_median * self._anomaly_threshold:
             logging.info("HIGH ANOMALY DETECTED!!!")
             return True
@@ -187,8 +191,8 @@ class DataCollector:
                 self._save_buff("all")
 
         if self._anomaly_threshold != 0.0 and self._frequency_array_full:
-            logging.debug(f"Checking mid buffer[{self._mid_frequency_index}] window freq: "
-                          f"{self.frequency_array[self._mid_frequency_index]}")
+            #logging.debug(f"Checking mid buffer[{self._mid_frequency_index}] window freq: "
+            #              f"{self.frequency_array[self._mid_frequency_index]}")
             if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
                 if self._save_dir:
                     self._save_buff("anomaly")
@@ -217,7 +221,7 @@ class DataCollector:
             if self._look_for_start:
                 if data.find(self._start_string) != -1:
                     self._look_for_start = False
-                    logging.info(f"Start string '{self._start_string}' detected - beginning acquisition...")
+                    logging.info(f"Start string '{self._start_string}' detected - beginning acquisition")
                 continue
             elif self._ignore_header_size:
                 # strip of the initial header data lines
@@ -226,7 +230,7 @@ class DataCollector:
                     continue
                 else:
                     logging.info(f"Specified header size ({self._ignore_header_size}) consumed - "
-                                 f"beginning acquisition...")
+                                 f"beginning acquisition")
                     self._ignore_header_size = 0
 
             data = data.split()[0:6]

@@ -111,7 +111,6 @@ def run():
     # setup logging
     log_level = config.get("system", None).get("logging_level", "INFO")
     set_logging(root_dir, log_level)
-    logging.info(f'Starting up using logging level {log_level}...')
 
     com_port = serial.Serial(port_name)
     com_port.baudrate = 9600
@@ -135,9 +134,10 @@ def run():
         com_port.close()
         sys.exit(0)
 
+    logging.info(f'Starting up using {log_level} logging level')
     logging.info(f"buff_size={buff_size}, window_size={window_size},anomaly_threshold={anomaly_threshold}")
     logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
-
+    logging.info("Looking for header...")
     dc.acquire_data(raw_dump=False)
     while not dc.acquisition_ended:
         sleep(0.01)
