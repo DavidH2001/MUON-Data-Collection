@@ -8,6 +8,8 @@ from time import sleep
 import logging
 from data_collector import DataCollector
 
+VERSION: str = "0.1.0"
+
 
 def serial_ports():
     """ Obtain a list of available serial port names.
@@ -99,6 +101,7 @@ def _check_config(config):
 
 def run():
     """Main"""
+    print(f"Muon data collection and anomaly detection V{VERSION}")
     # get configuration information
     with open("config.json") as json_data_file:
         config = json.load(json_data_file)
@@ -134,7 +137,7 @@ def run():
         com_port.close()
         sys.exit(0)
 
-    logging.info(f'Starting up using {log_level} logging level')
+    logging.info(f'Starting {VERSION} using {log_level} logging level')
     logging.info(f"buff_size={buff_size}, window_size={window_size},anomaly_threshold={anomaly_threshold}")
     logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
     logging.info("Looking for header...")

@@ -191,8 +191,6 @@ class DataCollector:
                 self._save_buff("all")
 
         if self._anomaly_threshold != 0.0 and self._frequency_array_full:
-            #logging.debug(f"Checking mid buffer[{self._mid_frequency_index}] window freq: "
-            #              f"{self.frequency_array[self._mid_frequency_index]}")
             if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
                 if self._save_dir:
                     self._save_buff("anomaly")
