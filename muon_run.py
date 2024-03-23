@@ -3,6 +3,7 @@ import os.path
 import sys
 import glob
 import json
+from datetime import datetime, timezone
 import serial
 from time import sleep
 import logging
@@ -68,7 +69,7 @@ def set_logging(root_dir: str, level: str) -> None:
     logging.basicConfig(
         level=logging.DEBUG if level.upper() == "DEBUG" else logging.INFO,
         format='%(asctime)s, %(levelname)s, %(message)s',
-        datefmt='%Y-%m-%d:%H:%M:%S',
+        datefmt='%Y-%m-%d:%H:%M:%S.%f',
         handlers=[
             logging.FileHandler(os.path.join(root_dir, "muon_log.txt")),
             logging.StreamHandler()
@@ -113,6 +114,10 @@ def run():
 
     # setup logging
     log_level = config.get("system", None).get("logging_level", "INFO")
+    start_time = datetime.now(timezone.utc).strftime("%y%m%d_%H%M%S")
+    root_dir = os.path.join(root_dir, start_time)
+    if not os.path.exists(root_dir):
+        os.mkdir(root_dir)
     set_logging(root_dir, log_level)
 
     com_port = serial.Serial(port_name)

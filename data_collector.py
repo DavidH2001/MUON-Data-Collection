@@ -28,7 +28,9 @@ class DataCollector:
     the whole buffer.
 
     When the buffer is full the logged frequencies are used to determine a baseline (median) frequency for the whole
-    buffer. This baseline frequency is continuously updated to allow for any drift in the detector system.
+    buffer. The buffer is the refilled starting from the beginning (oldest) entry again. The window frequency array is
+    also updated as each new window of events is received. The median frequency is updated when the buffer is
+    re-filled which allows for any drift in the detector system.
 
     Anomaly detection starts after the buffer has been initially filled with events using its central window. This
     enables events preceding and following an anomaly to be logged. Detection of an anomaly is achieved by comparing
@@ -237,10 +239,12 @@ class DataCollector:
             # if len(data) < 6:
             #     # ignore anything that does not consist of at least 6 fields
             #     continue
-            logging.debug(data)
+            # logging.debug(data)
 
             date_time_now = datetime.now(timezone.utc)
             data = [date_time_now.strftime(self._date_time_format)[:-3]] + data
+            # logging.debug(self._buff_index)
+            logging.debug(data)
 
             if len(self._buff) < self._buff_size:
                 # fill buffer for first time
