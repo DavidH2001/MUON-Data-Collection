@@ -155,7 +155,8 @@ def run():
                        window_size=window_size,
                        anomaly_threshold=anomaly_threshold,
                        log_all_events=True,
-                       start_string=s_name)
+                       start_string=s_name,
+                       user_id=user_id)
 
     if not user_interact_part_two():
         com_port.close()
