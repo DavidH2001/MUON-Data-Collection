@@ -7,6 +7,7 @@ import os.path
 import sys
 import signal
 import threading
+import queue
 import logging
 import codecs
 import numpy as np
@@ -64,7 +65,7 @@ class DataCollector:
         self._com_port = com_port
         self._save_dir: str = kwargs.get('save_dir', None)
         self._saved_file_names: list = []
-        self._ignore_header_size: int = kwargs.get("ignore_header_size", 6)
+        self._ignore_header_size: int = kwargs.get("ignore_header_size", 8)
         if self._save_dir and not os.path.exists(self._save_dir):
             raise NotADirectoryError(f"The specified save directory {self._save_dir} does not exist.")
         self._buff_size: int = kwargs.get('buff_size', 90)
@@ -98,6 +99,7 @@ class DataCollector:
                                    'temp': pd.Series(dtype='float'),
                                    'win_f': pd.Series(dtype='float'),
                                    'median_f': pd.Series(dtype='float')})
+        self._file_queue = queue.Queue(maxsize=100)
         signal.signal(signal.SIGINT, self._signal_handler)
 
     def __enter__(self):
@@ -132,13 +134,21 @@ class DataCollector:
             if name in str(line):
                 break
 
+    def _process_file_queue(self):
+        """process the file queue."""
+        logging.info("Process file queue thread started.")
+        while True:
+            file_path = self._file_queue.get(block=True)
+            self._copy_file_to_server(file_path)
+
     def _copy_file_to_server(self, file_path: str) -> None:
         """Copy file to remote server."""
         with FTP('192.168.0.32', 'Dave', 'DServer1') as ftp:
+            ftp.cwd(self._user_id)
             with open(file_path, 'rb') as file:
-                name = os.path.basename(file_path)
-                logging.info(f"Saving {name} to remote server.")
-                ftp.storbinary(f'STOR {name}', file)
+                target_path = os.path.basename(file_path)
+                logging.info(f"Saving {target_path} to remote server.")
+                ftp.storbinary(f'STOR {target_path}', file)
 
     def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""
@@ -153,7 +163,8 @@ class DataCollector:
         self._buff.to_csv(file_path, index=False, date_format=date_time_format)
         if sub_dir == "anomaly":
             # save buffer file remotely
-            self._copy_file_to_server(file_path)
+            # self._copy_file_to_server(file_path)
+            self._file_queue.put(file_path)
 
     def _check_for_anomaly(self, frequency) -> None:
         """Check for event anomaly."""
@@ -212,7 +223,7 @@ class DataCollector:
                 if self._save_dir:
                     self._save_buff("anomaly")
 
-    def _acquire_data(self, raw_dump: bool) -> None:
+    def _acquire_data(self) -> None:
         """
         Main data acquisition function used to sink the data from the serial port and hold it in a queue of buffers.
         Each buffer can hold a number of events that arrive within the specified time period. When the buffer queue is
@@ -220,14 +231,21 @@ class DataCollector:
         every subsequent buffer received. When a middle buffer exceeds the trigger threshold then the entire contents
         of the buffer queue are saved.
         """
+        logging.info("Acquisition thread started.")
         self._acquisition_ended = False
         header_line_count = 0
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
-            data = codecs.decode(data, 'UTF-8')
-            if raw_dump:
+            try:
+                data = codecs.decode(data, 'UTF-8')
+            except UnicodeDecodeError as e:
+                print("--------------decode error-------------")
+                print(e)
                 print(data)
+                print("---------------------------------------")
+                sys.exit(0)
+            #print(data)
 
             if data == 'exit':
                 logging.info("EXIT!!!")
@@ -261,12 +279,19 @@ class DataCollector:
             # logging.debug(self._buff_index)
             logging.debug(data)
 
-            if len(self._buff) < self._buff_size:
-                # fill buffer for first time
-                self._buff.loc[len(self._buff)] = data
-            else:
-                # Repeat filling of buffer. Note start from the beginning overwriting the oldest values.
-                self._buff.loc[self._buff_index] = data
+            try:
+                if len(self._buff) < self._buff_size:
+                    # fill buffer for first time
+                    self._buff.loc[len(self._buff)] = data
+                else:
+                    # Repeat filling of buffer. Note start from the beginning overwriting the oldest values.
+                    self._buff.loc[self._buff_index] = data
+            except ValueError as e:
+                print("------------data buff error------------")
+                print(e)
+                print(data)
+                print("---------------------------------------")
+                sys.exit(0)
 
             if self._event_counter and not self._event_counter % self._window_size:
                 # next window buffer full
@@ -278,8 +303,10 @@ class DataCollector:
         self._acquisition_ended = True
 
     def acquire_data(self,  raw_dump: bool = False) -> None:
-        t1 = threading.Thread(target=self._acquire_data(raw_dump))
+        t1 = threading.Thread(target=self._process_file_queue)
+        t2 = threading.Thread(target=self._acquire_data)
         t1.start()
+        t2.start()
 
     def _signal_handler(self, signal, frame):
         """

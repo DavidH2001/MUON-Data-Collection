@@ -103,7 +103,7 @@ def _check_config(config):
 
 def _check_ftp_connect(user_id: str) -> None:
     """Check FTP connection and initial setup."""
-    logging.info(f"Checking FTP connection for user id {user_id}")
+    logging.info(f"Checking FTP connection for user folder {user_id}")
     with FTP('192.168.0.32', 'Dave', 'DServer1') as ftp:
         if user_id in ftp.nlst():
             logging.info("Remote user directory found.")
@@ -133,7 +133,6 @@ def run():
         os.mkdir(root_dir)
     set_logging(root_dir, log_level)
 
-    logging.info("Hi")
     _check_ftp_connect(user_id)
 
     s_name, port_name = user_interact_part_one()
@@ -165,7 +164,7 @@ def run():
     logging.info(f'Starting {VERSION} using {log_level} logging level')
     logging.info(f"buff_size={buff_size}, window_size={window_size},anomaly_threshold={anomaly_threshold}")
     logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
-    logging.info("Looking for header...")
+    logging.info("Bypassing header lines...")
     dc.acquire_data(raw_dump=False)
     while not dc.acquisition_ended:
         sleep(0.01)
