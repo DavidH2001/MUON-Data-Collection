@@ -162,10 +162,10 @@ def run():
         sys.exit(0)
 
     logging.info(f'Starting {VERSION} using {log_level} logging level')
-    logging.info(f"buff_size={buff_size}, window_size={window_size},anomaly_threshold={anomaly_threshold}")
+    logging.info(f"buff_size={buff_size}, window_size={window_size}, anomaly_threshold={anomaly_threshold}")
     logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
     logging.info("Bypassing header lines...")
-    dc.acquire_data(raw_dump=False)
+    dc.acquire_data()
     while not dc.acquisition_ended:
         sleep(0.01)
 

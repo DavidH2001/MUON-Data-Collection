@@ -99,15 +99,13 @@ class DataCollector:
                                    'temp': pd.Series(dtype='float'),
                                    'win_f': pd.Series(dtype='float'),
                                    'median_f': pd.Series(dtype='float')})
-        self._file_queue = queue.Queue(maxsize=100)
+        self._file_queue = queue.Queue(maxsize=100)  # thread safe
         signal.signal(signal.SIGINT, self._signal_handler)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # if self._save_results:
-        #    self._event_file.close()
         pass
 
     @property
@@ -136,7 +134,7 @@ class DataCollector:
 
     def _process_file_queue(self):
         """process the file queue."""
-        logging.info("Process file queue thread started.")
+        logging.info("Process file queue thread started")
         while True:
             file_path = self._file_queue.get(block=True)
             self._copy_file_to_server(file_path)
@@ -147,7 +145,7 @@ class DataCollector:
             ftp.cwd(self._user_id)
             with open(file_path, 'rb') as file:
                 target_path = os.path.basename(file_path)
-                logging.info(f"Saving {target_path} to remote server.")
+                logging.info(f"Saving {target_path} to remote server")
                 ftp.storbinary(f'STOR {target_path}', file)
 
     def _save_buff(self, sub_dir=""):
@@ -231,7 +229,7 @@ class DataCollector:
         every subsequent buffer received. When a middle buffer exceeds the trigger threshold then the entire contents
         of the buffer queue are saved.
         """
-        logging.info("Acquisition thread started.")
+        logging.info("Acquisition thread started")
         self._acquisition_ended = False
         header_line_count = 0
         while True:
@@ -302,7 +300,7 @@ class DataCollector:
 
         self._acquisition_ended = True
 
-    def acquire_data(self,  raw_dump: bool = False) -> None:
+    def acquire_data(self) -> None:
         t1 = threading.Thread(target=self._process_file_queue)
         t2 = threading.Thread(target=self._acquire_data)
         t1.start()
@@ -323,7 +321,3 @@ class DataCollector:
             self._com_port.close()
             logging.info("Com port closed")
         sys.exit(1)
-
-
-
-
