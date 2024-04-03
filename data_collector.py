@@ -11,6 +11,7 @@ import logging
 import codecs
 import numpy as np
 import pandas as pd
+from ftplib import FTP
 from datetime import datetime, timezone
 
 date_time_format: str = "%Y-%m-%d %H:%M:%S.%f"
@@ -57,6 +58,7 @@ class DataCollector:
                ignore_header_size: Number of initial data lines to be ignored that represent the header. Defaults to 6.
                start_string: String sent from detector that will initiate event capture. Defaults to "" i.e. not used.
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
+               user_id: Unique user identity string.
         """
         logging.basicConfig()
         self._com_port = com_port
@@ -77,6 +79,8 @@ class DataCollector:
         self._anomaly_threshold = kwargs.get("anomaly_threshold", 2.0)
         self._log_all_events: bool = kwargs.get('log_all_events', '')
         self._start_string: bool = kwargs.get('start_string', '')
+        self._user_id: str = kwargs['user_id']
+
         if self._start_string != '':
             self._look_for_start = True
         else:
@@ -121,7 +125,6 @@ class DataCollector:
         return self._saved_file_names
 
     def _wait_for_start(self, name: str):
-
         while True:
             line = self._com_port.readline()  # Wait and read data
             print(line, end='')
@@ -129,9 +132,18 @@ class DataCollector:
             if name in str(line):
                 break
 
+    def _copy_file_to_server(self, file_path: str) -> None:
+        """Copy file to remote server."""
+        with FTP('192.168.0.32', 'Dave', 'DServer1') as ftp:
+            with open(file_path, 'rb') as file:
+                name = os.path.basename(file_path)
+                logging.info(f"Saving {name} to remote server.")
+                ftp.storbinary(f'STOR {name}', file)
+
     def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""
         self._saved_file_names.append(pd.to_datetime(self._buff['comp_time'][0]).strftime("%Y%m%d-%H%M%S.csv"))
+        # save buffer locally
         file_dir = os.path.join(self._save_dir, sub_dir)
         if not os.path.isdir(file_dir):
             logging.info(f"Creating directory {file_dir}")
@@ -139,6 +151,9 @@ class DataCollector:
         file_path = os.path.join(file_dir, self._saved_file_names[-1])
         logging.info(f"Saving buffer to file {file_path}")
         self._buff.to_csv(file_path, index=False, date_format=date_time_format)
+        if sub_dir == "anomaly":
+            # save buffer file remotely
+            self._copy_file_to_server(file_path)
 
     def _check_for_anomaly(self, frequency) -> None:
         """Check for event anomaly."""

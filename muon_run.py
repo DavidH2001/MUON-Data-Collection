@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import serial
 from time import sleep
 import logging
+from ftplib import FTP
 from data_collector import DataCollector
 
 VERSION: str = "0.1.0"
@@ -69,7 +70,7 @@ def set_logging(root_dir: str, level: str) -> None:
     logging.basicConfig(
         level=logging.DEBUG if level.upper() == "DEBUG" else logging.INFO,
         format='%(asctime)s, %(levelname)s, %(message)s',
-        datefmt='%Y-%m-%d:%H:%M:%S.%f',
+        datefmt='%Y-%m-%d:%H:%M:%S',
         handlers=[
             logging.FileHandler(os.path.join(root_dir, "muon_log.txt")),
             logging.StreamHandler()
@@ -100,6 +101,17 @@ def _check_config(config):
                          "type.")
 
 
+def _check_ftp_connect(user_id: str) -> None:
+    """Check FTP connection and initial setup."""
+    logging.info(f"Checking FTP connection for user id {user_id}")
+    with FTP('192.168.0.32', 'Dave', 'DServer1') as ftp:
+        if user_id in ftp.nlst():
+            logging.info("Remote user directory found.")
+        else:
+            logging.info(f"Welcome - creating remote user directory {user_id}.")
+            ftp.mkd(user_id)
+
+
 def run():
     """Main"""
     print(f"Muon data collection and anomaly detection V{VERSION}")
@@ -107,10 +119,11 @@ def run():
     with open("config.json") as json_data_file:
         config = json.load(json_data_file)
     _check_config(config)
-    root_dir = os.path.expanduser(config['event_files']['root_dir'])
 
-    s_name, port_name = user_interact_part_one()
-    print(f"{port_name} selected")
+    root_dir = os.path.expanduser(config['event_files']['root_dir'])
+    user_id = f"{config['user']['name']}-{str(config['user']['latitude'])}-{str(config['user']['longitude'])}"
+    user_id = user_id.replace('.', '-')
+    print(f"user_id={user_id}")
 
     # setup logging
     log_level = config.get("system", None).get("logging_level", "INFO")
@@ -119,6 +132,12 @@ def run():
     if not os.path.exists(root_dir):
         os.mkdir(root_dir)
     set_logging(root_dir, log_level)
+
+    logging.info("Hi")
+    _check_ftp_connect(user_id)
+
+    s_name, port_name = user_interact_part_one()
+    print(f"{port_name} selected")
 
     com_port = serial.Serial(port_name)
     com_port.baudrate = 9600
