@@ -1,6 +1,7 @@
 {
     "user": {
         "name": "Dave",
+        "password": "DServer1",
         "latitude": 10.0,
         "longitude": 10.0
     },
@@ -12,5 +13,8 @@
         "window_size": 10,
         "anomaly_threshold": 2.0,
         "logging_level": "DEBUG"
+    },
+    "remote": {
+        "ip_address": "86.28.131.79"
     }
 }

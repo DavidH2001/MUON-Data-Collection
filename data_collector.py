@@ -60,6 +60,9 @@ class DataCollector:
                start_string: String sent from detector that will initiate event capture. Defaults to "" i.e. not used.
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
                user_id: Unique user identity string.
+               user_name:
+               user_password:
+               ip_address:
         """
         logging.basicConfig()
         self._com_port = com_port
@@ -81,6 +84,9 @@ class DataCollector:
         self._log_all_events: bool = kwargs.get('log_all_events', '')
         self._start_string: bool = kwargs.get('start_string', '')
         self._user_id: str = kwargs['user_id']
+        self._user_name = kwargs['user_name']
+        self._user_password = kwargs['user_password']
+        self._ip_address = kwargs['ip_address']
 
         if self._start_string != '':
             self._look_for_start = True
@@ -132,21 +138,28 @@ class DataCollector:
             if name in str(line):
                 break
 
+    def _copy_file_to_server(self, file_path: str) -> bool:
+        """Copy file to remote server."""
+        try:
+            with FTP(self._ip_address, self._user_name, self._user_password) as ftp:
+                ftp.cwd(self._user_id)
+                with open(file_path, 'rb') as file:
+                    target_path = os.path.basename(file_path)
+                    logging.info(f"Saving {target_path} to remote server")
+                    ftp.storbinary(f'STOR {target_path}', file)
+            return True
+        except TimeoutError:
+            logging.error("Timeout - unable to connect with remote FTP server")
+            return False
+
     def _process_file_queue(self):
         """process the file queue."""
         logging.info("Process file queue thread started")
         while True:
             file_path = self._file_queue.get(block=True)
-            self._copy_file_to_server(file_path)
-
-    def _copy_file_to_server(self, file_path: str) -> None:
-        """Copy file to remote server."""
-        with FTP('192.168.0.32', 'Dave', 'DServer1') as ftp:
-            ftp.cwd(self._user_id)
-            with open(file_path, 'rb') as file:
-                target_path = os.path.basename(file_path)
-                logging.info(f"Saving {target_path} to remote server")
-                ftp.storbinary(f'STOR {target_path}', file)
+            if not self._copy_file_to_server(file_path):
+                # unable to copy file to server so place the path back into the queue
+                self._file_queue.put(file_path)
 
     def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""

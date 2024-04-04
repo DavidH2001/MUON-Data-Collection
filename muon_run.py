@@ -41,7 +41,9 @@ def serial_ports():
 def user_interact_part_one():
     print(f"Host platform: {sys.platform}")
     print("Connect the S detector to a serial port on the host.")
-    s_name = input("Enter the name of your S detector (if set) else select [return] to continue: ")
+    s_name = input("Enter the name of your S detector (if set) else [return] to continue or [Q] to quit: ")
+    if s_name.upper() == "Q":
+        sys.exit(0)
     if s_name != "":
         print(f"Acquisition will only start when the host detects '{s_name}' from connected detector.")
 
@@ -101,15 +103,18 @@ def _check_config(config):
                          "type.")
 
 
-def _check_ftp_connect(user_id: str) -> None:
+def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_address: str) -> None:
     """Check FTP connection and initial setup."""
     logging.info(f"Checking FTP connection for user folder {user_id}")
-    with FTP('192.168.0.32', 'Dave', 'DServer1') as ftp:
-        if user_id in ftp.nlst():
-            logging.info("Remote user directory found.")
-        else:
-            logging.info(f"Welcome - creating remote user directory {user_id}.")
-            ftp.mkd(user_id)
+    try:
+        with FTP(ip_address, user_name, user_password) as ftp:
+            if user_id in ftp.nlst():
+                logging.info("Remote user directory found.")
+            else:
+                logging.info(f"Welcome! Creating remote user directory {user_id}.")
+                ftp.mkd(user_id)
+    except TimeoutError:
+        logging.error("Timeout - unable to connect with remote FTP server")
 
 
 def run():
@@ -133,7 +138,7 @@ def run():
         os.mkdir(root_dir)
     set_logging(root_dir, log_level)
 
-    _check_ftp_connect(user_id)
+    _check_ftp_connect(config['user']['name'], config['user']['password'], user_id, config['remote']['ip_address'])
 
     s_name, port_name = user_interact_part_one()
     print(f"{port_name} selected")
@@ -155,7 +160,10 @@ def run():
                        anomaly_threshold=anomaly_threshold,
                        log_all_events=True,
                        start_string=s_name,
-                       user_id=user_id)
+                       user_id=user_id,
+                       user_name=config['user']['name'],
+                       user_password=config['user']['password'],
+                       ip_address=config['remote']['ip_address'])
 
     if not user_interact_part_two():
         com_port.close()
