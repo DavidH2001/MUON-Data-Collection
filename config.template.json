@@ -1,9 +1,9 @@
 {
     "user": {
-        "name": "Dave",
-        "password": "DServer1",
-        "latitude": 10.0,
-        "longitude": 10.0
+        "name": "",
+        "password": "",
+        "latitude": 0.0,
+        "longitude": 0.0
     },
     "event_files": {
         "root_dir": "~/muon_data"
@@ -15,6 +15,6 @@
         "logging_level": "DEBUG"
     },
     "remote": {
-        "ip_address": "86.28.131.179"
+        "ip_address": ""
     }
 }

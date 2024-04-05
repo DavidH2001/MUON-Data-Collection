@@ -151,7 +151,7 @@ class DataCollector:
         logging.info(f"Saving file queue to {self._queue_save_file_name}")
         file_list = []
         while not self._file_queue.empty():
-            file_list.append(self._file_queue.get())
+            file_list.append(self._file_queue.get() + '\n')
         if file_list:
             logging.info(f"Preserving {len(file_list)} file names")
             with open(self._queue_save_file_name, "w") as f:
@@ -160,6 +160,7 @@ class DataCollector:
     def _load_queue(self):
         """Load the file queue from file."""
         if os.path.exists(self._queue_save_file_name):
+            logging.info(f"Loading unprocessed queue files from {self._queue_save_file_name}")
             with open(self._queue_save_file_name, "r") as f:
                 self._file_queue.put(f.readline())
             os.remove(self._queue_save_file_name)
@@ -170,6 +171,7 @@ class DataCollector:
             with FTP(self._ip_address, self._user_name, self._user_password) as ftp:
                 ftp.cwd(self._user_id)
                 with open(file_path, 'rb') as file:
+                    # TODO ALL file_path is string containing all file names!!!
                     target_path = os.path.basename(file_path)
                     if not os.path.exists(file_path):
                         logging.info(f"{file_path} no longer exists and has been removed from queue")
@@ -184,6 +186,7 @@ class DataCollector:
     def _process_file_queue(self):
         """process the file queue."""
         logging.info("Remote access thread started")
+        self._load_queue()
         while True:
             time.sleep(3)
             try:

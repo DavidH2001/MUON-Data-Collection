@@ -105,7 +105,7 @@ def _check_config(config):
 
 def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_address: str) -> None:
     """Check FTP connection and initial setup."""
-    logging.info(f"Checking FTP connection for user folder {user_id}. Waiting for response...")
+    logging.info(f"Checking FTP connection for user folder {user_id}. Waiting for response from {ip_address}...")
     try:
         with FTP(ip_address, user_name, user_password) as ftp:
             if user_id in ftp.nlst():
@@ -138,7 +138,8 @@ def run():
         os.mkdir(root_dir)
     set_logging(root_dir, log_level)
 
-    _check_ftp_connect(config['user']['name'], config['user']['password'], user_id, config['remote']['ip_address'])
+    if config['remote']['ip_address'] != "":
+        _check_ftp_connect(config['user']['name'], config['user']['password'], user_id, config['remote']['ip_address'])
 
     s_name, port_name = user_interact_part_one()
     print(f"{port_name} selected")
@@ -173,7 +174,8 @@ def run():
     logging.info(f"buff_size={buff_size}, window_size={window_size}, anomaly_threshold={anomaly_threshold}")
     logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
     dc.acquire_data()
-    dc.run_remote()
+    if config['remote']['ip_address'] != "":
+        dc.run_remote()
     logging.info("Bypassing S detector header lines...")
     while not dc.processing_ended:
         sleep(0.01)
