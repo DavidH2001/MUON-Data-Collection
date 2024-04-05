@@ -36,10 +36,14 @@ computer via a USB cable.
 
 Follow this sequence to start logging events:
 
-1) Start the detection software on the logging computer:
+1) Start the detection software on the logging computer. For example:
 ```
 $ python muon_run.py
 ```
-
+or, if using a virtual environment:
+```
+$ ./venv/Scripts/activate
+$ python muon_run.py
+```
 
 

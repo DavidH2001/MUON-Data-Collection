@@ -9,6 +9,7 @@ import signal
 import threading
 import queue
 import logging
+import time
 import codecs
 import numpy as np
 import pandas as pd
@@ -95,7 +96,9 @@ class DataCollector:
         self._date_time_format: str = "%Y%m%d %H%M%S.%f"
         self._event_counter: int = 0
         self._buff_index: int = 0
+        self._shut_down: bool = False
         self._acquisition_ended = False
+        self._remote_access_ended = False
         self._buff = pd.DataFrame({'comp_time': pd.Series(dtype='str'),
                                    'event': pd.Series(dtype='int'),
                                    'arduino_time': pd.Series(dtype='int'),
@@ -115,8 +118,10 @@ class DataCollector:
         pass
 
     @property
-    def acquisition_ended(self):
-        return self._acquisition_ended
+    def processing_ended(self):
+        if self._acquisition_ended and self._remote_access_ended:
+            return True
+        return False
 
     @property
     def frequency_array(self):
@@ -145,6 +150,9 @@ class DataCollector:
                 ftp.cwd(self._user_id)
                 with open(file_path, 'rb') as file:
                     target_path = os.path.basename(file_path)
+                    if not os.path.exists(file_path):
+                        logging.info(f"{file_path} no longer exists and has been removed from queue")
+                        return True
                     logging.info(f"Saving {target_path} to remote server")
                     ftp.storbinary(f'STOR {target_path}', file)
             return True
@@ -154,12 +162,20 @@ class DataCollector:
 
     def _process_file_queue(self):
         """process the file queue."""
-        logging.info("Process file queue thread started")
+        logging.info("Remote access thread started")
         while True:
-            file_path = self._file_queue.get(block=True)
-            if not self._copy_file_to_server(file_path):
-                # unable to copy file to server so place the path back into the queue
-                self._file_queue.put(file_path)
+            time.sleep(3)
+            try:
+                file_path = self._file_queue.get(block=False)
+                if not self._copy_file_to_server(file_path):
+                    # unable to copy file to server so place the path back into the queue
+                    self._file_queue.put(file_path)
+            except queue.Empty:
+                pass
+            if self._shut_down:
+                logging.info("Remote access thread shutting down")
+                self._remote_access_ended = True
+                break
 
     def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""
@@ -216,9 +232,6 @@ class DataCollector:
         self._frequency_index += 1
         if self._frequency_index == len(self._frequency_array):
             # end of frequency array reached
-            # if self._log_all_events:
-            #     # save buffer anyway if we are not looking for anomalies
-            #     self._save_buff()
             self._frequency_index = 0
             self._frequency_array_full = True
             # frequency array (and hence event buffer) is now full so start to capture current frequency median
@@ -248,6 +261,10 @@ class DataCollector:
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
+            if data == b'':
+                continue
+            if self._shut_down:
+                break
             try:
                 data = codecs.decode(data, 'UTF-8')
             except UnicodeDecodeError as e:
@@ -310,27 +327,24 @@ class DataCollector:
 
             self._buff_index = self._event_counter % self._buff_size
             self._event_counter += 1
-
+        logging.info("Acquisition thread shutting down")
         self._acquisition_ended = True
 
     def acquire_data(self) -> None:
-        t1 = threading.Thread(target=self._process_file_queue)
         t2 = threading.Thread(target=self._acquire_data)
-        t1.start()
         t2.start()
+
+    def run_remote(self) -> None:
+        t1 = threading.Thread(target=self._process_file_queue)
+        t1.start()
 
     def _signal_handler(self, signal, frame):
         """
         Ctrl-c signal handler. Note this can result in an error being generated if
         we are currently blocking on com_port.readline()
-
         """
-        logging.info('ctrl-c detected')
-
-        if self._event_file is not None:
-            self._event_file.close()
-            logging.info("File closed")
-        if self._com_port is not None:
-            self._com_port.close()
-            logging.info("Com port closed")
-        sys.exit(1)
+        logging.info('Ctrl-C detected - shutting down...')
+        # if self._com_port is not None:
+        #     self._com_port.close()
+        #     logging.info("Com port closed")
+        self._shut_down = True

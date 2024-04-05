@@ -105,7 +105,7 @@ def _check_config(config):
 
 def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_address: str) -> None:
     """Check FTP connection and initial setup."""
-    logging.info(f"Checking FTP connection for user folder {user_id}")
+    logging.info(f"Checking FTP connection for user folder {user_id}. Waiting for response...")
     try:
         with FTP(ip_address, user_name, user_password) as ftp:
             if user_id in ftp.nlst():
@@ -143,7 +143,7 @@ def run():
     s_name, port_name = user_interact_part_one()
     print(f"{port_name} selected")
 
-    com_port = serial.Serial(port_name)
+    com_port = serial.Serial(port_name, timeout=0.1)
     com_port.baudrate = 9600
     com_port.bytesize = 8
     com_port.parity = 'N'
@@ -172,10 +172,12 @@ def run():
     logging.info(f'Starting {VERSION} using {log_level} logging level')
     logging.info(f"buff_size={buff_size}, window_size={window_size}, anomaly_threshold={anomaly_threshold}")
     logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
-    logging.info("Bypassing header lines...")
     dc.acquire_data()
-    while not dc.acquisition_ended:
+    dc.run_remote()
+    logging.info("Bypassing header lines...")
+    while not dc.processing_ended:
         sleep(0.01)
+    logging.info("Shutdown complete")
 
 
 if __name__ == '__main__':
