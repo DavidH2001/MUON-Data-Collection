@@ -88,7 +88,6 @@ class DataCollector:
         self._user_name = kwargs['user_name']
         self._user_password = kwargs['user_password']
         self._ip_address = kwargs['ip_address']
-
         if self._start_string != '':
             self._look_for_start = True
         else:
@@ -99,6 +98,9 @@ class DataCollector:
         self._shut_down: bool = False
         self._acquisition_ended = False
         self._remote_access_ended = False
+        self._queue_save_file_name = "queue.txt"
+        self._file_queue = queue.Queue(maxsize=100)  # thread safe
+
         self._buff = pd.DataFrame({'comp_time': pd.Series(dtype='str'),
                                    'event': pd.Series(dtype='int'),
                                    'arduino_time': pd.Series(dtype='int'),
@@ -108,7 +110,6 @@ class DataCollector:
                                    'temp': pd.Series(dtype='float'),
                                    'win_f': pd.Series(dtype='float'),
                                    'median_f': pd.Series(dtype='float')})
-        self._file_queue = queue.Queue(maxsize=100)  # thread safe
         signal.signal(signal.SIGINT, self._signal_handler)
 
     def __enter__(self):
@@ -143,6 +144,26 @@ class DataCollector:
             if name in str(line):
                 break
 
+    def _save_queue(self):
+        """Save the file queue to file."""
+        if os.path.exists(self._queue_save_file_name):
+            os.remove(self._queue_save_file_name)
+        logging.info(f"Saving file queue to {self._queue_save_file_name}")
+        file_list = []
+        while not self._file_queue.empty():
+            file_list.append(self._file_queue.get())
+        if file_list:
+            logging.info(f"Preserving {len(file_list)} file names")
+            with open(self._queue_save_file_name, "w") as f:
+                f.writelines(file_list)
+
+    def _load_queue(self):
+        """Load the file queue from file."""
+        if os.path.exists(self._queue_save_file_name):
+            with open(self._queue_save_file_name, "r") as f:
+                self._file_queue.put(f.readline())
+            os.remove(self._queue_save_file_name)
+
     def _copy_file_to_server(self, file_path: str) -> bool:
         """Copy file to remote server."""
         try:
@@ -174,6 +195,8 @@ class DataCollector:
                 pass
             if self._shut_down:
                 logging.info("Remote access thread shutting down")
+                if not self._file_queue.empty():
+                    self._save_queue()
                 self._remote_access_ended = True
                 break
 

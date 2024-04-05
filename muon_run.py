@@ -174,7 +174,7 @@ def run():
     logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
     dc.acquire_data()
     dc.run_remote()
-    logging.info("Bypassing header lines...")
+    logging.info("Bypassing S detector header lines...")
     while not dc.processing_ended:
         sleep(0.01)
     logging.info("Shutdown complete")
