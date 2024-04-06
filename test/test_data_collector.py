@@ -12,6 +12,7 @@ import tempfile
 import json
 import numpy as np
 import pandas as pd
+import queue
 import codecs
 import logging
 from data_collector import DataCollector
@@ -159,7 +160,7 @@ class DataCollectorTest(unittest.TestCase):
             self.max_events_to_be_processed = window_size + 1
             # Middle data buffer only contained 7 events so file should be empty.
             data_collector.acquire_data()
-            while not data_collector.acquisition_ended:
+            while not data_collector.processing_ended:
                 sleep(0.01)
             self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
             f = data_collector.frequency_array.copy()
@@ -169,7 +170,7 @@ class DataCollectorTest(unittest.TestCase):
             # Collect another window length of events so frequency array should contain 2 values.
             self.max_events_to_be_processed = 2 * window_size + 1
             data_collector.acquire_data()
-            while not data_collector.acquisition_ended:
+            while not data_collector.processing_ended:
                 sleep(0.01)
             self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
             f2 = data_collector.frequency_array.copy()
@@ -181,7 +182,7 @@ class DataCollectorTest(unittest.TestCase):
             self.max_events_to_be_processed = 3 * window_size + 1
             # Middle data buffer only contained 7 events so file should be empty.
             data_collector.acquire_data()
-            while not data_collector.acquisition_ended:
+            while not data_collector.processing_ended:
                 sleep(0.01)
             self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
             f3 = data_collector.frequency_array.copy()
@@ -194,7 +195,7 @@ class DataCollectorTest(unittest.TestCase):
             self.max_events_to_be_processed = 4 * window_size + 1
             # Middle data buffer only contained 7 events so file should be empty.
             data_collector.acquire_data()
-            while not data_collector.acquisition_ended:
+            while not data_collector.processing_ended:
                 sleep(0.01)
             self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
             f4 = data_collector.frequency_array.copy()
@@ -220,7 +221,7 @@ class DataCollectorTest(unittest.TestCase):
                                use_arduino_time=self.use_arduino_time) as data_collector:
 
                 data_collector.acquire_data()
-                while not data_collector.acquisition_ended:
+                while not data_collector.processing_ended:
                     sleep(0.01)
 
                 self.assertEqual(len(data_collector.saved_file_names), 2)
@@ -259,7 +260,7 @@ class DataCollectorTest(unittest.TestCase):
                                use_arduino_time=self.use_arduino_time) as data_collector:
 
                 data_collector.acquire_data()
-                while not data_collector.acquisition_ended:
+                while not data_collector.processing_ended:
                     sleep(0.01)
 
                 # We should have 4 log all buffers + 1 low anomaly buffer. High anomaly is spread out over larger
@@ -299,7 +300,7 @@ class DataCollectorTest(unittest.TestCase):
                                use_arduino_time=self.use_arduino_time) as data_collector:
 
                 data_collector.acquire_data()
-                while not data_collector.acquisition_ended:
+                while not data_collector.processing_ended:
                     sleep(0.01)
 
                 file_path = os.path.join(temp_dir, "all", data_collector.saved_file_names[0])
@@ -323,9 +324,70 @@ class DataCollectorTest(unittest.TestCase):
                                start_string=start_string,
                                use_arduino_time=self.use_arduino_time) as data_collector:
                 data_collector.acquire_data()
-                while not data_collector.acquisition_ended:
+                while not data_collector.processing_ended:
                     sleep(0.01)
                 self.assertTrue(data_collector.saved_file_names == [])
 
+    def test_save_load_queue(self):
+        """Test save and load queue."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            f1_path = os.path.join(temp_dir, "file_1.csv")
+            f1 = open(f1_path, 'w')
+            f1.writelines(["a", "b"])
+            f1.close()
+            f2_path = os.path.join(temp_dir, "file_2.csv")
+            f2 = open(f2_path, 'w')
+            f2.writelines(["a", "b"])
+            f2.close()
+            queue_save_path = os.path.join(temp_dir, "queue.txt")
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               log_all_events=True,
+                               save_results=True,
+                               ignore_header_size=0,
+                               start_string="",
+                               queue_save_path=os.path.join(queue_save_path),
+                               use_arduino_time=self.use_arduino_time) as dc:
+                dc._file_queue.put(f1_path)
+                dc._file_queue.put(f2_path)
+                self.assertFalse(os.path.exists(queue_save_path))
+                dc._save_queue()
+                self.assertTrue(os.path.exists(queue_save_path))
 
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               log_all_events=True,
+                               save_results=True,
+                               ignore_header_size=0,
+                               start_string="",
+                               queue_save_path=os.path.join(queue_save_path),
+                               use_arduino_time=self.use_arduino_time) as dc:
+                self.assertTrue(os.path.exists(queue_save_path))
+                dc._load_queue()
+                self.assertFalse(os.path.exists(queue_save_path))
+                self.assertEqual(dc._file_queue.get(), f1_path)
+                self.assertEqual(dc._file_queue.get(), f2_path)
 
+    def test_data_collector_file_queue(self):
+        """Test logging of event anomalies to queue/file."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            queue_save_path = os.path.join(temp_dir, "queue.txt")
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               save_results=True,
+                               ignore_header_size=0,
+                               ip_address="1.2.3.4",  # defining ip will cause DC to use queue/file
+                               queue_save_path=os.path.join(queue_save_path),
+                               use_arduino_time=self.use_arduino_time) as dc:
+
+                dc.acquire_data()
+                dc.run_remote()
+                while not dc._acquisition_ended:
+                    sleep(0.01)
+
+                # Tell remaining thread (remote process) to shut down. Note remote thread will probably still be
+                # blocked trying to FTP a file extracted from the queue at this point. Eventually this will time
+                # out and be reinstated to the queue before saving its content.
+                dc._shut_down = True
+                sleep(20)
+                self.assertTrue(queue_save_path)

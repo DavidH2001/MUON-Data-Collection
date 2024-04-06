@@ -64,6 +64,7 @@ class DataCollector:
                user_name:
                user_password:
                ip_address:
+               queue_save_path:
         """
         logging.basicConfig()
         self._com_port = com_port
@@ -84,10 +85,10 @@ class DataCollector:
         self._anomaly_threshold = kwargs.get("anomaly_threshold", 2.0)
         self._log_all_events: bool = kwargs.get('log_all_events', '')
         self._start_string: bool = kwargs.get('start_string', '')
-        self._user_id: str = kwargs['user_id']
-        self._user_name = kwargs['user_name']
-        self._user_password = kwargs['user_password']
-        self._ip_address = kwargs['ip_address']
+        self._user_id: str = kwargs.get('user_id', "")
+        self._user_name = kwargs.get('user_name', "")
+        self._user_password = kwargs.get('user_password', "")
+        self._ip_address = kwargs.get('ip_address', "")
         if self._start_string != '':
             self._look_for_start = True
         else:
@@ -96,9 +97,9 @@ class DataCollector:
         self._event_counter: int = 0
         self._buff_index: int = 0
         self._shut_down: bool = False
-        self._acquisition_ended = False
-        self._remote_access_ended = False
-        self._queue_save_file_name = "queue.txt"
+        self._acquisition_ended = True
+        self._remote_access_ended = True
+        self._queue_save_path = kwargs.get("queue_save_path", "queue.txt")
         self._file_queue = queue.Queue(maxsize=100)  # thread safe
 
         self._buff = pd.DataFrame({'comp_time': pd.Series(dtype='str'),
@@ -146,24 +147,31 @@ class DataCollector:
 
     def _save_queue(self):
         """Save the file queue to file."""
-        if os.path.exists(self._queue_save_file_name):
-            os.remove(self._queue_save_file_name)
-        logging.info(f"Saving file queue to {self._queue_save_file_name}")
+        if os.path.exists(self._queue_save_path):
+            os.remove(self._queue_save_path)
+        logging.info(f"Saving file queue to {self._queue_save_path}...")
         file_list = []
         while not self._file_queue.empty():
             file_list.append(self._file_queue.get() + '\n')
         if file_list:
-            logging.info(f"Preserving {len(file_list)} file names")
-            with open(self._queue_save_file_name, "w") as f:
+            logging.info(f"{len(file_list)} file names have been preserved")
+            with open(self._queue_save_path, "w") as f:
                 f.writelines(file_list)
 
     def _load_queue(self):
         """Load the file queue from file."""
-        if os.path.exists(self._queue_save_file_name):
-            logging.info(f"Loading unprocessed queue files from {self._queue_save_file_name}")
-            with open(self._queue_save_file_name, "r") as f:
-                self._file_queue.put(f.readline())
-            os.remove(self._queue_save_file_name)
+        if os.path.exists(self._queue_save_path):
+            logging.info(f"Loading unprocessed files from {self._queue_save_path}...")
+            with open(self._queue_save_path, "r") as f:
+                i = 0
+                for file_path in f:
+                    file_path = file_path.rstrip("\n")
+                    if not os.path.exists(file_path):
+                        logging.info(f"Throwing away {file_path} as it no longer exists")
+                        continue
+                    self._file_queue.put(file_path)
+            logging.info(f"{i} files loaded")
+            os.remove(self._queue_save_path)
 
     def _copy_file_to_server(self, file_path: str) -> bool:
         """Copy file to remote server."""
@@ -171,7 +179,6 @@ class DataCollector:
             with FTP(self._ip_address, self._user_name, self._user_password) as ftp:
                 ftp.cwd(self._user_id)
                 with open(file_path, 'rb') as file:
-                    # TODO ALL file_path is string containing all file names!!!
                     target_path = os.path.basename(file_path)
                     if not os.path.exists(file_path):
                         logging.info(f"{file_path} no longer exists and has been removed from queue")
@@ -184,7 +191,7 @@ class DataCollector:
             return False
 
     def _process_file_queue(self):
-        """process the file queue."""
+        """Process the file queue running on separate thread."""
         logging.info("Remote access thread started")
         self._load_queue()
         while True:
@@ -193,6 +200,7 @@ class DataCollector:
                 file_path = self._file_queue.get(block=False)
                 if not self._copy_file_to_server(file_path):
                     # unable to copy file to server so place the path back into the queue
+                    logging.info(f"Queuing {file_path}")
                     self._file_queue.put(file_path)
             except queue.Empty:
                 pass
@@ -215,8 +223,7 @@ class DataCollector:
         logging.info(f"Saving buffer to file {file_path}")
         self._buff.to_csv(file_path, index=False, date_format=date_time_format)
         if sub_dir == "anomaly":
-            # save buffer file remotely
-            # self._copy_file_to_server(file_path)
+            # queue buffer file name to be saved remotely on separate thread
             self._file_queue.put(file_path)
 
     def _check_for_anomaly(self, frequency) -> None:
@@ -353,15 +360,18 @@ class DataCollector:
 
             self._buff_index = self._event_counter % self._buff_size
             self._event_counter += 1
+
         logging.info("Acquisition thread shutting down")
         self._acquisition_ended = True
 
     def acquire_data(self) -> None:
         t2 = threading.Thread(target=self._acquire_data)
+        self._acquisition_ended = False
         t2.start()
 
     def run_remote(self) -> None:
         t1 = threading.Thread(target=self._process_file_queue)
+        self._remote_access_ended = False
         t1.start()
 
     def _signal_handler(self, signal, frame):

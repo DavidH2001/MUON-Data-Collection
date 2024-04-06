@@ -5,12 +5,11 @@ Muon detectors.
 
 ## Prerequisites
 
-This software has been tested with Python 3.8 and 3.9. Earlier 3.x version may also work. The following packages are 
+This software has been tested with Python 3.8 and 3.9. Other 3.x version may also work. The following packages are 
 required to be included as part of your Python instance:
 
 [pandas](https://pypi.org/project/pandas/)<br/>
 [pyserial](https://pypi.org/project/pyserial/0)
-
 
 ## Installation
 
@@ -19,8 +18,7 @@ the download into a chosen directory of your computer. Alternatively, you can co
 software directly from the repository. This way you will be able to obtain any updates quickly and make changes to the 
 code via a *Pull Request*. 
 
-
-### Software Configuration
+### Software configuration
 Before you can run the data collector you will need to set up a number of parameters in the configuration file.
 When you install the code you will find a template file in the project folder called *config.template.json*. Copy and 
 rename this file. Open the copied file and set the following parameters:
@@ -32,7 +30,7 @@ rename this file. Open the copied file and set the following parameters:
 * "event_files root_dir" - string defining an existing directory where your event files will be saved.
 * "remote ip_address" - IP address of remote file server. If this is left as an empty string then remote access will not be attempted.
 
-### Hardware Configuration
+### Hardware configuration
 Set up two detectors to run in coincidence mode making sure the intended S (slave) detector is connected to the logging
 computer via a USB cable.
 
@@ -51,6 +49,6 @@ $ python muon_run.py
 ```
 
 If you have configured an IP address then the collector will attempt to connect with the remote file server. If this
-fails to connect then make sure the IP address is correct. You will still be able to proceed with start-up as the 
-collection software will retry to connect later.       
+fails to connect then make sure the IP address is set correctly. You will still be able to proceed with start-up as the 
+software will retry to connect later.       
 
