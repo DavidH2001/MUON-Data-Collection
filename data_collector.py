@@ -70,7 +70,7 @@ class DataCollector:
         self._com_port = com_port
         self._save_dir: str = kwargs.get('save_dir', None)
         self._saved_file_names: list = []
-        self._ignore_header_size: int = kwargs.get("ignore_header_size", 8)
+        self._ignore_header_size: int = kwargs.get("ignore_header_size", 0)
         if self._save_dir and not os.path.exists(self._save_dir):
             raise NotADirectoryError(f"The specified save directory {self._save_dir} does not exist.")
         self._buff_size: int = kwargs.get('buff_size', 90)
@@ -85,14 +85,15 @@ class DataCollector:
         self._anomaly_threshold = kwargs.get("anomaly_threshold", 2.0)
         self._log_all_events: bool = kwargs.get('log_all_events', '')
         self._start_string: bool = kwargs.get('start_string', '')
+        if self._start_string != '':
+            self._look_for_start_string = True
+        else:
+            self._look_for_start_string = False
+        self._look_for_start = True
         self._user_id: str = kwargs.get('user_id', "")
         self._user_name = kwargs.get('user_name', "")
         self._user_password = kwargs.get('user_password', "")
         self._ip_address = kwargs.get('ip_address', "")
-        if self._start_string != '':
-            self._look_for_start = True
-        else:
-            self._look_for_start = False
         self._date_time_format: str = "%Y%m%d %H%M%S.%f"
         self._event_counter: int = 0
         self._buff_index: int = 0
@@ -101,7 +102,7 @@ class DataCollector:
         self._remote_access_ended = True
         self._queue_save_path = kwargs.get("queue_save_path", "queue.txt")
         self._file_queue = queue.Queue(maxsize=100)  # thread safe
-
+        self._suppress_timeout_message = False
         self._buff = pd.DataFrame({'comp_time': pd.Series(dtype='str'),
                                    'event': pd.Series(dtype='int'),
                                    'arduino_time': pd.Series(dtype='int'),
@@ -185,9 +186,12 @@ class DataCollector:
                         return True
                     logging.info(f"Saving {target_path} to remote server")
                     ftp.storbinary(f'STOR {target_path}', file)
+                    self._suppress_timeout_message = False
             return True
         except TimeoutError:
-            logging.error("Timeout - unable to connect with remote FTP server")
+            if not self._suppress_timeout_message:
+                logging.error("Timeout - unable to connect with remote FTP server")
+            self._suppress_timeout_message = True
             return False
 
     def _process_file_queue(self):
@@ -200,7 +204,6 @@ class DataCollector:
                 file_path = self._file_queue.get(block=False)
                 if not self._copy_file_to_server(file_path):
                     # unable to copy file to server so place the path back into the queue
-                    logging.info(f"Queuing {file_path}")
                     self._file_queue.put(file_path)
             except queue.Empty:
                 pass
@@ -226,7 +229,7 @@ class DataCollector:
             # queue buffer file name to be saved remotely on separate thread
             self._file_queue.put(file_path)
 
-    def _check_for_anomaly(self, frequency) -> None:
+    def _check_for_anomaly(self, frequency) -> bool:
         """Check for event anomaly."""
         logging.debug(f"Checking mid buff[{self._mid_frequency_index}] window freq: "
                       f"{frequency} against median frequency {self._frequency_median}")
@@ -313,32 +316,37 @@ class DataCollector:
                 break
 
             if self._look_for_start:
-                if data.find(self._start_string) != -1:
-                    self._look_for_start = False
-                    logging.info(f"Start string '{self._start_string}' detected - beginning acquisition")
-                continue
-            elif self._ignore_header_size:
-                # strip of the initial header data lines
-                if header_line_count < self._ignore_header_size:
-                    header_line_count += 1
+                if self._look_for_start_string:
+                    if data.find(self._start_string) != -1:
+                        self._look_for_start = False
+                        logging.info(f"Start string '{self._start_string}' detected - beginning acquisition")
                     continue
+                elif self._ignore_header_size:
+                    # strip of the initial header data lines
+                    if header_line_count < self._ignore_header_size:
+                        header_line_count += 1
+                        continue
+                    else:
+                        logging.info(f"Specified header size ({self._ignore_header_size}) consumed - "
+                                     f"beginning acquisition")
+                        self._ignore_header_size = 0
                 else:
-                    logging.info(f"Specified header size ({self._ignore_header_size}) consumed - "
-                                 f"beginning acquisition")
-                    self._ignore_header_size = 0
+                    if "###" in data:
+                        continue
+                    if len(data.split()) < 6:
+                        continue
+                    logging.info(f"Event line detected - beginning acquisition")
+                    self._look_for_start = False
 
             data = data.split()[0:6]
             data.extend(['', ''])
-
-            # if len(data) < 6:
-            #     # ignore anything that does not consist of at least 6 fields
-            #     continue
-            # logging.debug(data)
-
             date_time_now = datetime.now(timezone.utc)
             data = [date_time_now.strftime(self._date_time_format)[:-3]] + data
-            # logging.debug(self._buff_index)
-            logging.debug(data)
+            if self._event_counter < 5:
+                # always log first few events
+                logging.info(data)
+            else:
+                logging.debug(data)
 
             try:
                 if len(self._buff) < self._buff_size:

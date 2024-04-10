@@ -176,7 +176,7 @@ def run():
     dc.acquire_data()
     if config['remote']['ip_address'] != "":
         dc.run_remote()
-    logging.info("Bypassing S detector header lines...")
+    logging.info("Waiting for initial S detector event line...")
     while not dc.processing_ended:
         sleep(0.01)
     logging.info("Shutdown complete")

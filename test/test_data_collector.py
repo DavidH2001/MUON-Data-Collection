@@ -12,7 +12,6 @@ import tempfile
 import json
 import numpy as np
 import pandas as pd
-import queue
 import codecs
 import logging
 from data_collector import DataCollector
@@ -27,7 +26,7 @@ def set_logging():
         format='%(asctime)s, %(levelname)s, %(message)s',
         datefmt='%Y-%m-%d:%H:%M:%S',
         handlers=[
-            logging.FileHandler('C:/Users/dave/Temp/muon_log.txt'),
+            logging.FileHandler('muon_log.txt'),
             logging.StreamHandler()
         ]
     )
@@ -205,10 +204,6 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_event_anomalies(self):
         """Test logging of event anomalies to file. test data contains a single high and low event anomaly."""
-        #temp_dir = 'c:/Users/dave/Temp'
-        # if os.path.isfile(data_file):
-        #     os.remove(data_file)
-
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 5
             buff_size = 25
@@ -329,7 +324,7 @@ class DataCollectorTest(unittest.TestCase):
                 self.assertTrue(data_collector.saved_file_names == [])
 
     def test_save_load_queue(self):
-        """Test save and load queue."""
+        """Test save and load queue functions."""
         with tempfile.TemporaryDirectory() as temp_dir:
             f1_path = os.path.join(temp_dir, "file_1.csv")
             f1 = open(f1_path, 'w')
@@ -369,7 +364,7 @@ class DataCollectorTest(unittest.TestCase):
                 self.assertEqual(dc._file_queue.get(), f2_path)
 
     def test_data_collector_file_queue(self):
-        """Test logging of event anomalies to queue/file."""
+        """Test preservation of event anomaly file names to queue/file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             queue_save_path = os.path.join(temp_dir, "queue.txt")
             with DataCollector(self.mock_com_port,
