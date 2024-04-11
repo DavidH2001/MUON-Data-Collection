@@ -216,13 +216,15 @@ class DataCollector:
 
     def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""
-        self._saved_file_names.append(pd.to_datetime(self._buff['comp_time'][0]).strftime("%Y%m%d-%H%M%S.csv"))
+        file_name = pd.to_datetime(self._buff['comp_time'][self._buff_index - 1]).strftime("%Y%m%d-%H%M%S.csv")
+        # use the oldest date in buffer for file name
+        self._saved_file_names.append(file_name)
         # save buffer locally
         file_dir = os.path.join(self._save_dir, sub_dir)
         if not os.path.isdir(file_dir):
             logging.info(f"Creating directory {file_dir}")
             os.mkdir(file_dir)
-        file_path = os.path.join(file_dir, self._saved_file_names[-1])
+        file_path = os.path.join(file_dir, file_name)
         logging.info(f"Saving buffer to file {file_path}")
         self._buff.to_csv(file_path, index=False, date_format=date_time_format)
         if sub_dir == "anomaly":
@@ -234,10 +236,10 @@ class DataCollector:
         logging.debug(f"Checking mid buff[{self._mid_frequency_index}] window freq: "
                       f"{frequency} against median frequency {self._frequency_median}")
         if frequency > self._frequency_median * self._anomaly_threshold:
-            logging.info("HIGH ANOMALY DETECTED!!!")
+            logging.info(f"HIGH ANOMALY DETECTED at frequency {frequency}")
             return True
         if frequency < self._frequency_median / self._anomaly_threshold:
-            logging.info("LOW ANOMALY DETECTED!!!")
+            logging.info(f"LOW ANOMALY DETECTED at frequency {frequency}")
             return True
         return False
 
@@ -261,8 +263,8 @@ class DataCollector:
             # first time filling of frequency array
             self._frequency_array[self._frequency_index] = window_freq
 
-        logging.info(f"window time (s) = {windows_time_diff.total_seconds()} arduino time (s) = {arduino_time_diff} "
-                     f"window frequency[{self._frequency_index}] = {window_freq}")
+        logging.debug(f"window time (s) = {windows_time_diff.total_seconds()} arduino time (s) = {arduino_time_diff} "
+                      f"window frequency[{self._frequency_index}] = {window_freq}")
         self._buff.loc[cur_buff_index, 'win_f'] = window_freq
 
         self._frequency_index += 1
@@ -319,7 +321,7 @@ class DataCollector:
                 if self._look_for_start_string:
                     if data.find(self._start_string) != -1:
                         self._look_for_start = False
-                        logging.info(f"Start string '{self._start_string}' detected - beginning acquisition")
+                        logging.info(f"Start string '{self._start_string}' detected - beginning acquisition...")
                     continue
                 elif self._ignore_header_size:
                     # strip of the initial header data lines
@@ -329,6 +331,7 @@ class DataCollector:
                     else:
                         logging.info(f"Specified header size ({self._ignore_header_size}) consumed - "
                                      f"beginning acquisition")
+                        logging.info("Note, only first 3 events will be displayed if logging at INFO level...")
                         self._ignore_header_size = 0
                 else:
                     if "###" in data:
@@ -338,27 +341,31 @@ class DataCollector:
                     logging.info(f"Event line detected - beginning acquisition")
                     self._look_for_start = False
 
-            data = data.split()[0:6]
-            data.extend(['', ''])
+            data_list = data.split()
+            if len(data_list) < 6:
+                logging.info(f"Bad event line {data} detected")
+                continue
+            data_list = data_list[0:6]
+            data_list.extend(['', ''])
             date_time_now = datetime.now(timezone.utc)
-            data = [date_time_now.strftime(self._date_time_format)[:-3]] + data
-            if self._event_counter < 5:
+            data_list = [date_time_now.strftime(self._date_time_format)[:-3]] + data_list
+            if self._event_counter < 3:
                 # always log first few events
-                logging.info(data)
+                logging.info(data_list)
             else:
-                logging.debug(data)
+                logging.debug(data_list)
 
             try:
                 if len(self._buff) < self._buff_size:
                     # fill buffer for first time
-                    self._buff.loc[len(self._buff)] = data
+                    self._buff.loc[len(self._buff)] = data_list
                 else:
                     # Repeat filling of buffer. Note start from the beginning overwriting the oldest values.
-                    self._buff.loc[self._buff_index] = data
+                    self._buff.loc[self._buff_index] = data_list
             except ValueError as e:
                 print("------------data buff error------------")
                 print(e)
-                print(data)
+                print(data_list)
                 print("---------------------------------------")
                 sys.exit(0)
 

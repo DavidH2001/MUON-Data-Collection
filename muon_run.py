@@ -40,12 +40,16 @@ def serial_ports():
 
 def user_interact_part_one():
     print(f"Host platform: {sys.platform}")
-    print("Connect the S detector to a serial port on the host.")
-    s_name = input("Enter the name of your S detector (if set) else [return] to continue or [Q] to quit: ")
-    if s_name.upper() == "Q":
+    print("Connect the S-detector to a serial port on the host.")
+    # s_name = input("Enter the name of your S-detector (if set) else [return] to continue or [Q] to quit: ")
+    # if s_name.upper() == "Q":
+    #     sys.exit(0)
+    # if s_name != "":
+    #     print(f"Acquisition will only start when the host detects '{s_name}' from connected detector.")
+    s_name = ""
+    response = input("Select [return] to continue or [Q] to quit: ")
+    if response.upper() == "Q":
         sys.exit(0)
-    if s_name != "":
-        print(f"Acquisition will only start when the host detects '{s_name}' from connected detector.")
 
     print('\nAvailable serial ports:')
     available_ports = serial_ports()
@@ -59,7 +63,7 @@ def user_interact_part_one():
 
 
 def user_interact_part_two() -> bool:
-    print("Reset the M detector and then the S detector.")
+    print("Reset the M-detector and then the S-detector.")
     print("Confirm that the detector displaying 'S---' is the one connected to the serial port.")
     option = input("Select [return] to continue or [Q] to quit: ")
     if option.upper() != '':
@@ -170,13 +174,13 @@ def run():
         com_port.close()
         sys.exit(0)
 
-    logging.info(f'Starting {VERSION} using {log_level} logging level')
+    logging.info(f'Running detection software V{VERSION} using {log_level} logging level')
     logging.info(f"buff_size={buff_size}, window_size={window_size}, anomaly_threshold={anomaly_threshold}")
     logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
     dc.acquire_data()
     if config['remote']['ip_address'] != "":
         dc.run_remote()
-    logging.info("Waiting for initial S detector event line...")
+    logging.info("Waiting for S-detector initial event line...")
     while not dc.processing_ended:
         sleep(0.01)
     logging.info("Shutdown complete")
