@@ -41,7 +41,7 @@ with open("config.json") as json_data_file:
     config = json.load(json_data_file)
 
 root_dir = os.path.expanduser(config['event_files']['root_dir'])
-root_dir = os.path.join(root_dir, "240411_114454")
+root_dir = os.path.join(root_dir, "240411_183012")
 fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
 
 

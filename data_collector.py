@@ -31,7 +31,7 @@ class DataCollector:
     the whole buffer.
 
     When the buffer is full the logged frequencies are used to determine a baseline (median) frequency for the whole
-    buffer. The buffer is the refilled starting from the beginning (oldest) entry again. The window frequency array is
+    buffer. The buffer is then refilled starting from the beginning (oldest) entry again. The window frequency array is
     also updated as each new window of events is received. The median frequency is updated when the buffer is
     re-filled which allows for any drift in the detector system.
 
@@ -311,7 +311,6 @@ class DataCollector:
                 print(data)
                 print("---------------------------------------")
                 sys.exit(0)
-            #print(data)
 
             if data == 'exit':
                 logging.info("EXIT!!!")
@@ -334,6 +333,7 @@ class DataCollector:
                         logging.info("Note, only first 3 events will be displayed if logging at INFO level...")
                         self._ignore_header_size = 0
                 else:
+                    # auto search for start i.e., ignore header comments and look for event string
                     if "###" in data:
                         continue
                     if len(data.split()) < 6:
