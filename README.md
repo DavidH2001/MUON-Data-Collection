@@ -21,13 +21,14 @@ code via a *Pull Request*.
 ### Software configuration
 Before you can run the data collector you will need to set up a number of parameters in the configuration file.
 When you install the code you will find a template file in the project folder called *config.template.json*. Copy and 
-rename this file. Open the copied file and set the following parameters:
+rename this file to *config.json* in the sme directory. Open the copied file and set the following parameters:
 
 * "user name" - designated unique name for logging event data and connecting to remote file server.
 * "user password" - designated password name for connecting to remote file server.
 * "user latitude" - float value representing the latitude of the user's detectors.
 * "user longitude" - float value representing the longitude of the user's detectors.
 * "event_files root_dir" - string defining an existing directory where your event files will be saved.
+* "system logging_level" - Set to "DEBUG" to log all details or "INFO" to log a summary.
 * "remote ip_address" - IP address of remote file server. If this is left as an empty string then remote access will not be attempted.
 
 ### Hardware configuration

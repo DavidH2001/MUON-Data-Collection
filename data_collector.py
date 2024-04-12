@@ -304,7 +304,7 @@ class DataCollector:
             if self._shut_down:
                 break
             try:
-                data = codecs.decode(data, 'UTF-8')
+                data = codecs.decode(data, 'UTF-8', errors='replace')
             except UnicodeDecodeError as e:
                 print("--------------decode error-------------")
                 print(e)

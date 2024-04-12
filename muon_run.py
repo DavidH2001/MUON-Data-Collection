@@ -154,9 +154,9 @@ def run():
     com_port.parity = 'N'
     com_port.stopbits = 1
 
-    buff_size = config.get("system", None).get("buff_size", 200)
+    buff_size = config.get("system", None).get("buff_size", 210)
     window_size = config.get("system", None).get("window_size", 10)
-    anomaly_threshold = config.get("system", None).get("anomaly_threshold", 2.0)
+    anomaly_threshold = config.get("system", None).get("anomaly_threshold", 3.0)
 
     dc = DataCollector(com_port=com_port,
                        save_dir=root_dir,
