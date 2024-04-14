@@ -80,8 +80,15 @@ class DataCollector:
         self._frequency_array: np.array = np.zeros(self._buff_size // self._window_size)
         self._mid_frequency_index = self.frequency_array.size // 2
         self._frequency_median: float = 0.0
+        self._max_median_frequency: float = kwargs.get("max_median_frequency", 1.0)
+
+        # reset parameters
         self._frequency_index: int = 0
         self._frequency_array_full: bool = False
+        self._event_counter: int = 0
+        self._buff_index: int = 0
+        self._look_for_start = True
+
         self._anomaly_threshold = kwargs.get("anomaly_threshold", 2.0)
         self._log_all_events: bool = kwargs.get('log_all_events', '')
         self._start_string: bool = kwargs.get('start_string', '')
@@ -89,14 +96,12 @@ class DataCollector:
             self._look_for_start_string = True
         else:
             self._look_for_start_string = False
-        self._look_for_start = True
         self._user_id: str = kwargs.get('user_id', "")
         self._user_name = kwargs.get('user_name', "")
         self._user_password = kwargs.get('user_password', "")
         self._ip_address = kwargs.get('ip_address', "")
         self._date_time_format: str = "%Y%m%d %H%M%S.%f"
-        self._event_counter: int = 0
-        self._buff_index: int = 0
+
         self._shut_down: bool = False
         self._acquisition_ended = True
         self._remote_access_ended = True
@@ -243,7 +248,7 @@ class DataCollector:
             return True
         return False
 
-    def _update_frequency_history(self, cur_buff_index: int) -> None:
+    def _update_frequency_history(self, cur_buff_index: int) -> bool:
         """With a new window set of data available update the window event frequency history and look for anomalies."""
         window_data = self._buff.copy().iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
 
@@ -274,6 +279,11 @@ class DataCollector:
             self._frequency_array_full = True
             # frequency array (and hence event buffer) is now full so start to capture current frequency median
             self._frequency_median = np.median(self._frequency_array)
+            if self._frequency_median > self._max_median_frequency:
+                logging.info(f"Median frequency {self._frequency_median} exceeded maximum {self._max_median_frequency}")
+                logging.info("Check that you running in coincidence mode and connected to the S-detector")
+                return False
+
             logging.info(f"buffer median frequency: {self._frequency_median}")
             self._buff.loc[cur_buff_index, 'median_f'] = self._frequency_median
             if self._log_all_events:
@@ -284,6 +294,15 @@ class DataCollector:
             if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
                 if self._save_dir:
                     self._save_buff("anomaly")
+        return True
+
+    def _reset(self):
+        """Reset parameters required for re-start."""
+        self._frequency_index: int = 0
+        self._frequency_array_full: bool = False
+        self._event_counter: int = 0
+        self._buff_index: int = 0
+        self._look_for_start = True
 
     def _acquire_data(self) -> None:
         """
@@ -330,7 +349,6 @@ class DataCollector:
                     else:
                         logging.info(f"Specified header size ({self._ignore_header_size}) consumed - "
                                      f"beginning acquisition")
-                        logging.info("Note, only first 3 events will be displayed if logging at INFO level...")
                         self._ignore_header_size = 0
                 else:
                     # auto search for start i.e., ignore header comments and look for event string
@@ -339,12 +357,19 @@ class DataCollector:
                     if len(data.split()) < 6:
                         continue
                     logging.info(f"Event line detected - beginning acquisition")
+                    logging.info("Note, only first 3 events will be displayed if logging at INFO level...")
                     self._look_for_start = False
 
+            if "###" in data:
+                # assume detector is re-booting
+                logging.info("Detector is re-booting - resetting for new acquisition...")
+                self._reset()
+                continue
             data_list = data.split()
             if len(data_list) < 6:
                 logging.info(f"Bad event line {data} detected")
                 continue
+
             data_list = data_list[0:6]
             data_list.extend(['', ''])
             date_time_now = datetime.now(timezone.utc)
@@ -371,7 +396,8 @@ class DataCollector:
 
             if self._event_counter and not self._event_counter % self._window_size:
                 # next window buffer full
-                self._update_frequency_history(self._buff_index)
+                if not self._update_frequency_history(self._buff_index):
+                    break
 
             self._buff_index = self._event_counter % self._buff_size
             self._event_counter += 1

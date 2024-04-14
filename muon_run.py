@@ -168,7 +168,8 @@ def run():
                        user_id=user_id,
                        user_name=config['user']['name'],
                        user_password=config['user']['password'],
-                       ip_address=config['remote']['ip_address'])
+                       ip_address=config['remote']['ip_address'],
+                       max_median_frequency=config['system']['max_median_frequency'])
 
     if not user_interact_part_two():
         com_port.close()

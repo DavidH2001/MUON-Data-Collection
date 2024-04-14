@@ -12,7 +12,8 @@
         "buff_size": 110,
         "window_size": 10,
         "anomaly_threshold": 3.0,
-        "logging_level": "DEBUG"
+        "logging_level": "DEBUG",
+        "max_median_frequency": 1.0
     },
     "remote": {
         "ip_address": ""
