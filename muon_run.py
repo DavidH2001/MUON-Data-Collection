@@ -86,6 +86,7 @@ def set_logging(root_dir: str, level: str) -> None:
 
 def _check_config(config):
     """Check the contents of the configuration file."""
+
     if ("event_files" not in config or "root_dir" not in config["event_files"] or
             config["event_files"]["root_dir"] == ""):
         raise ValueError("Please edit config.json to define the required root directory for logging event files.")
@@ -105,6 +106,14 @@ def _check_config(config):
     if "anomaly_threshold" not in config["system"] or not isinstance(config["system"]["anomaly_threshold"], float):
         raise ValueError("The system anomaly_threshold parameter in config.json is missing or defined with incorrect "
                          "type.")
+
+    if "remote" not in config:
+        raise ValueError("invalid config file - missing a 'remote' section")
+    if "ip_address" not in config["remote"]:
+        raise ValueError("invalid config file - 'remote' section is missing 'ip_address'")
+    if "ip_address" != "":
+        if "name" not in config["user"] or config["user"]["name"] == "":
+            raise ValueError("Please set a user name and password when defining a remote IP address.")
 
 
 def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_address: str) -> None:

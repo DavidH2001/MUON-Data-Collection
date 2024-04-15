@@ -90,37 +90,58 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_config(self):
         """Test configuration file access."""
-        with open("../config.json") as json_data_file:
+        with open("../config.template.json") as json_data_file:
             config = json.load(json_data_file)
 
-        self.assertTrue("event_files" in config)
-        self.assertTrue("root_dir" in config["event_files"])
-        self.assertTrue("user" in config)
-        self.assertTrue("latitude" in config["user"])
-        self.assertTrue("longitude" in config["user"])
-        config['event_files']['root_dir'] = ""
-        config['user']['latitude'] = 0.0
-        config['user']['longitude'] = 0.0
+        self.assertIn("event_files", config)
+        self.assertIn("root_dir", config["event_files"])
+        self.assertIn("user", config)
+        self.assertIn("system", config)
+        self.assertIn("remote", config)
 
+        self.assertIn("name", config["user"])
+        self.assertIn("password", config["user"])
+        self.assertIn("latitude", config["user"])
+        self.assertIn("longitude", config["user"])
+        self.assertIn("ip_address", config["remote"])
+
+        config['event_files']['root_dir'] = ""
         with self.assertRaises(ValueError) as context:
             _check_config(config)
-        self.assertTrue("Please edit config.json to define the required root directory for logging event files."
-                        in str(context.exception))
+        self.assertIn(f"Please edit config.json to define the required root directory for logging event files.",
+                      str(context.exception))
 
         config['event_files']['root_dir'] = "a:/b/c"
         with self.assertRaises(ValueError) as context:
             _check_config(config)
-        self.assertTrue(f"The root_dir '{config['event_files']['root_dir']}' defined in config.json does not exist."
-                        in str(context.exception))
+        self.assertIn(f"The root_dir '{config['event_files']['root_dir']}' defined in config.json does not exist.",
+                      str(context.exception))
 
-        config['event_files']['root_dir'] = "c:/"
+        config['event_files']['root_dir'] = "."
+        config['user']['latitude'] = 0.0
+        config['user']['longitude'] = 0.0
         with self.assertRaises(ValueError) as context:
             _check_config(config)
-        self.assertTrue("Please edit config.json to define the user latitude and longitude decimal values."
-                        in str(context.exception))
+        self.assertIn("Please edit config.json to define the user latitude and longitude decimal values.",
+                      str(context.exception))
 
-        config['user']['latitude'] = 50.815
-        config['user']['longitude'] = -1.224
+        config['event_files']['root_dir'] = "."
+        config["remote"]["ip_address"] = "1.2.3.4"
+        with self.assertRaises(ValueError) as context:
+            _check_config(config)
+        self.assertIn("Please edit config.json to define the user latitude and longitude decimal values.",
+                      str(context.exception))
+
+        config["user"]["longitude"] = 10.0
+        config["user"]["latitude"] = 10.0
+        with self.assertRaises(ValueError) as context:
+            _check_config(config)
+        self.assertIn("Please set a user name and password when defining a remote IP address.",
+                      str(context.exception))
+
+        config["user"]["name"] = 10.0
+        config["user"]["password"] = 10.0
+
         _check_config(config)
 
     def test_data_collector_params(self):
