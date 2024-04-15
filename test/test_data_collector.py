@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import codecs
 import logging
-from data_collector import DataCollector
+from data_collector import DataCollector, Status
 from muon_run import _check_config
 from unittest.mock import Mock
 
@@ -153,7 +153,8 @@ class DataCollectorTest(unittest.TestCase):
                            window_size=window_size,
                            save_results=True,
                            ignore_header_size=0,
-                           use_arduino_time=self.use_arduino_time) as data_collector:
+                           use_arduino_time=self.use_arduino_time,
+                           max_median_frequency=15.0) as data_collector:
 
             # Collect 1 window length of events so frequency array should contain 1 value.
             self.max_events_to_be_processed = window_size + 1
@@ -202,6 +203,24 @@ class DataCollectorTest(unittest.TestCase):
             self.assertTrue(f4[1] == f3[2])
             self.assertTrue(f4[2] != f3[2])
 
+    def test_data_collector_exceed_max_median_frequency(self):
+        """Test data collector exits due to high median frequency detected."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window_size = 5
+            buff_size = 25
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               save_results=True,
+                               ignore_header_size=0,
+                               use_arduino_time=self.use_arduino_time) as data_collector:
+                data_collector.acquire_data()
+                while not data_collector.processing_ended:
+                    sleep(0.01)
+
+                self.assertEqual(data_collector._status, Status.MEDIAN_FREQUENCY_EXCEEDED)
+
     def test_data_collector_event_anomalies(self):
         """Test logging of event anomalies to file. test data contains a single high and low event anomaly."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -213,7 +232,8 @@ class DataCollectorTest(unittest.TestCase):
                                window_size=window_size,
                                save_results=True,
                                ignore_header_size=0,
-                               use_arduino_time=self.use_arduino_time) as data_collector:
+                               use_arduino_time=self.use_arduino_time,
+                               max_median_frequency=15.0) as data_collector:
 
                 data_collector.acquire_data()
                 while not data_collector.processing_ended:
@@ -252,7 +272,8 @@ class DataCollectorTest(unittest.TestCase):
                                log_all_events=True,
                                save_results=True,
                                ignore_header_size=0,
-                               use_arduino_time=self.use_arduino_time) as data_collector:
+                               use_arduino_time=self.use_arduino_time,
+                               max_median_frequency=15.0) as data_collector:
 
                 data_collector.acquire_data()
                 while not data_collector.processing_ended:
@@ -292,7 +313,8 @@ class DataCollectorTest(unittest.TestCase):
                                save_results=True,
                                ignore_header_size=0,
                                start_string=codecs.decode(start_string, 'UTF-8'),
-                               use_arduino_time=self.use_arduino_time) as data_collector:
+                               use_arduino_time=self.use_arduino_time,
+                               max_median_frequency=15.0) as data_collector:
 
                 data_collector.acquire_data()
                 while not data_collector.processing_ended:
@@ -317,7 +339,8 @@ class DataCollectorTest(unittest.TestCase):
                                save_results=True,
                                ignore_header_size=0,
                                start_string=start_string,
-                               use_arduino_time=self.use_arduino_time) as data_collector:
+                               use_arduino_time=self.use_arduino_time,
+                               max_median_frequency=15.0) as data_collector:
                 data_collector.acquire_data()
                 while not data_collector.processing_ended:
                     sleep(0.01)
@@ -342,7 +365,8 @@ class DataCollectorTest(unittest.TestCase):
                                ignore_header_size=0,
                                start_string="",
                                queue_save_path=os.path.join(queue_save_path),
-                               use_arduino_time=self.use_arduino_time) as dc:
+                               use_arduino_time=self.use_arduino_time,
+                               max_median_frequency=15.0) as dc:
                 dc._file_queue.put(f1_path)
                 dc._file_queue.put(f2_path)
                 self.assertFalse(os.path.exists(queue_save_path))
@@ -356,7 +380,8 @@ class DataCollectorTest(unittest.TestCase):
                                ignore_header_size=0,
                                start_string="",
                                queue_save_path=os.path.join(queue_save_path),
-                               use_arduino_time=self.use_arduino_time) as dc:
+                               use_arduino_time=self.use_arduino_time,
+                               max_median_frequency=15.0) as dc:
                 self.assertTrue(os.path.exists(queue_save_path))
                 dc._load_queue()
                 self.assertFalse(os.path.exists(queue_save_path))
@@ -373,7 +398,8 @@ class DataCollectorTest(unittest.TestCase):
                                ignore_header_size=0,
                                ip_address="1.2.3.4",  # defining ip will cause DC to use queue/file
                                queue_save_path=os.path.join(queue_save_path),
-                               use_arduino_time=self.use_arduino_time) as dc:
+                               use_arduino_time=self.use_arduino_time,
+                               max_median_frequency=15.0) as dc:
 
                 dc.acquire_data()
                 dc.run_remote()

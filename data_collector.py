@@ -3,6 +3,7 @@
 """
 
 """
+from enum import Enum
 import os.path
 import sys
 import signal
@@ -17,6 +18,11 @@ from ftplib import FTP
 from datetime import datetime, timezone
 
 date_time_format: str = "%Y-%m-%d %H:%M:%S.%f"
+
+
+class Status(Enum):
+    NORMAL = 1
+    MEDIAN_FREQUENCY_EXCEEDED = 2
 
 
 class DataCollector:
@@ -108,6 +114,7 @@ class DataCollector:
         self._queue_save_path = kwargs.get("queue_save_path", "queue.txt")
         self._file_queue = queue.Queue(maxsize=100)  # thread safe
         self._suppress_timeout_message = False
+        self._status: Enum = Status.NORMAL
         self._buff = pd.DataFrame({'comp_time': pd.Series(dtype='str'),
                                    'event': pd.Series(dtype='int'),
                                    'arduino_time': pd.Series(dtype='int'),
@@ -282,6 +289,7 @@ class DataCollector:
             if self._frequency_median > self._max_median_frequency:
                 logging.info(f"Median frequency {self._frequency_median} exceeded maximum {self._max_median_frequency}")
                 logging.info("Check that you running in coincidence mode and connected to the S-detector")
+                self._status = Status.MEDIAN_FREQUENCY_EXCEEDED
                 return False
 
             logging.info(f"buffer median frequency: {self._frequency_median}")
