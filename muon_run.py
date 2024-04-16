@@ -8,9 +8,7 @@ import serial
 from time import sleep
 import logging
 from ftplib import FTP
-from data_collector import DataCollector
-
-VERSION: str = "0.1.0"
+from data_collector import DataCollector, VERSION
 
 
 def serial_ports():
@@ -118,7 +116,8 @@ def _check_config(config):
 
 def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_address: str) -> None:
     """Check FTP connection and initial setup."""
-    logging.info(f"Checking FTP connection for user folder {user_id}. Waiting for response from {ip_address}...")
+    logging.info(f"Checking FTP connection for user folder {user_id}")
+    logging.info(f"Waiting for response from {ip_address}...")
     try:
         with FTP(ip_address, user_name, user_password) as ftp:
             if user_id in ftp.nlst():

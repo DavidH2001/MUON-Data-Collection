@@ -17,7 +17,8 @@ import pandas as pd
 from ftplib import FTP
 from datetime import datetime, timezone
 
-date_time_format: str = "%Y-%m-%d %H:%M:%S.%f"
+DATE_TIME_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
+VERSION: str = "0.1.0"
 
 
 class Status(Enum):
@@ -88,10 +89,11 @@ class DataCollector:
         self._frequency_median: float = 0.0
         self._max_median_frequency: float = kwargs.get("max_median_frequency", 1.0)
 
-        # reset parameters
         self._frequency_index: int = 0
         self._frequency_array_full: bool = False
+        # total number of events received since start
         self._event_counter: int = 0
+        # buffer index for latest event entry - cycles between 0 and _buff_size -1
         self._buff_index: int = 0
         self._look_for_start = True
 
@@ -226,8 +228,15 @@ class DataCollector:
                 self._remote_access_ended = True
                 break
 
+    def _write_csv(self, file_path):
+        """Write event data as CSV file."""
+        with open(file_path, 'a') as f:
+            f.write(f"{VERSION}, {self._user_id}, {self._buff_size}, {self._window_size}, {self._anomaly_threshold}\n")
+            self._buff.to_csv(f, index=False, date_format=DATE_TIME_FORMAT, lineterminator='\n')
+
     def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""
+        # name of saved file is based on time of the penultimate entry in the buffer
         file_name = pd.to_datetime(self._buff['comp_time'][self._buff_index - 1]).strftime("%Y%m%d-%H%M%S.csv")
         # use the oldest date in buffer for file name
         self._saved_file_names.append(file_name)
@@ -238,30 +247,29 @@ class DataCollector:
             os.mkdir(file_dir)
         file_path = os.path.join(file_dir, file_name)
         logging.info(f"Saving buffer to file {file_path}")
-        self._buff.to_csv(file_path, index=False, date_format=date_time_format)
+        # self._buff.to_csv(file_path, index=False, date_format=date_time_format)
+        self._write_csv(file_path)
         if sub_dir == "anomaly":
             # queue buffer file name to be saved remotely on separate thread
             self._file_queue.put(file_path)
 
-    def _check_for_anomaly(self, frequency) -> bool:
+    def _check_for_anomaly(self, mid_frequency) -> bool:
         """Check for event anomaly."""
         logging.debug(f"Checking mid buff[{self._mid_frequency_index}] window freq: "
-                      f"{frequency} against median frequency {self._frequency_median}")
-        if frequency > self._frequency_median * self._anomaly_threshold:
-            logging.info(f"HIGH ANOMALY DETECTED at frequency {frequency}")
+                      f"{mid_frequency} against median frequency {self._frequency_median}")
+        if mid_frequency > self._frequency_median * self._anomaly_threshold:
+            logging.info(f"HIGH ANOMALY DETECTED at frequency {mid_frequency}")
             return True
-        if frequency < self._frequency_median / self._anomaly_threshold:
-            logging.info(f"LOW ANOMALY DETECTED at frequency {frequency}")
+        if mid_frequency < self._frequency_median / self._anomaly_threshold:
+            logging.info(f"LOW ANOMALY DETECTED at frequency {mid_frequency}")
             return True
         return False
 
     def _update_frequency_history(self, cur_buff_index: int) -> bool:
         """With a new window set of data available update the window event frequency history and look for anomalies."""
         window_data = self._buff.copy().iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
-
         window_data.loc[window_data.index[:], 'comp_time'] = (
             pd.to_datetime(window_data.loc[window_data.index[:], 'comp_time'], format=self._date_time_format))
-
         windows_time_diff = (window_data.loc[window_data.index[-1], 'comp_time'] -
                              window_data.loc[window_data.index[0], 'comp_time'])
         arduino_time_diff = (int(window_data.loc[window_data.index[-1], 'arduino_time']) -
@@ -274,7 +282,6 @@ class DataCollector:
         else:
             # first time filling of frequency array
             self._frequency_array[self._frequency_index] = window_freq
-
         logging.debug(f"window time (s) = {windows_time_diff.total_seconds()} arduino time (s) = {arduino_time_diff} "
                       f"window frequency[{self._frequency_index}] = {window_freq}")
         self._buff.loc[cur_buff_index, 'win_f'] = window_freq
@@ -291,11 +298,9 @@ class DataCollector:
                 logging.info("Check that you running in coincidence mode and connected to the S-detector")
                 self._status = Status.MEDIAN_FREQUENCY_EXCEEDED
                 return False
-
             logging.info(f"buffer median frequency: {self._frequency_median}")
             self._buff.loc[cur_buff_index, 'median_f'] = self._frequency_median
             if self._log_all_events:
-                # save buffer anyway if we are not looking for anomalies
                 self._save_buff("all")
 
         if self._anomaly_threshold != 0.0 and self._frequency_array_full:
@@ -403,7 +408,7 @@ class DataCollector:
                 sys.exit(0)
 
             if self._event_counter and not self._event_counter % self._window_size:
-                # next window buffer full
+                # next event window full
                 if not self._update_frequency_history(self._buff_index):
                     break
 

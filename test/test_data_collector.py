@@ -263,7 +263,7 @@ class DataCollectorTest(unittest.TestCase):
                 self.assertEqual(len(data_collector.saved_file_names), 2)
                 file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
                 self.assertTrue(os.path.isfile(file_path))
-                df = pd.read_csv(file_path)
+                df = pd.read_csv(file_path, skiprows=1)
                 self.assertEqual(df.shape, (buff_size, 9))
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check high anomaly is in center of saved event buffer
@@ -271,7 +271,7 @@ class DataCollectorTest(unittest.TestCase):
 
                 file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[1])
                 self.assertTrue(os.path.isfile(file_path))
-                df = pd.read_csv(file_path)
+                df = pd.read_csv(file_path, skiprows=1)
                 self.assertEqual(df.shape, (buff_size, 9))
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check low anomaly is in center of saved event buffer
@@ -304,7 +304,7 @@ class DataCollectorTest(unittest.TestCase):
                 # window size and is thus not seen.
                 self.assertEqual(len(data_collector.saved_file_names), 5)
                 file_path = os.path.join(temp_dir, "all", data_collector.saved_file_names[0])
-                df = pd.read_csv(file_path)
+                df = pd.read_csv(file_path, skiprows=1)
                 self.assertTrue(os.path.isfile(file_path))
                 # confirm we have 3 window frequencies at required positions
                 states = df['win_f'].notna()
@@ -343,7 +343,7 @@ class DataCollectorTest(unittest.TestCase):
 
                 file_path = os.path.join(temp_dir, "all", data_collector.saved_file_names[0])
                 self.assertTrue(os.path.isfile(file_path))
-                df = pd.read_csv(file_path, dtype={0: str, 1: str}).iloc[:, 0:7]
+                df = pd.read_csv(file_path, dtype={0: str, 1: str}, skiprows=1).iloc[:, 0:7]
                 self.assertEqual(df['event'][0], str(event_index+2))
 
     def test_data_collector_start_string_fail(self):
