@@ -222,7 +222,7 @@ class DataCollector:
             except queue.Empty:
                 pass
             if self._shut_down:
-                logging.info("Remote access thread shutting down")
+                logging.info("Remote access thread shutting down...")
                 if not self._file_queue.empty():
                     self._save_queue()
                 self._remote_access_ended = True
@@ -375,7 +375,7 @@ class DataCollector:
 
             if "###" in data:
                 # assume detector is re-booting
-                logging.info("Detector is re-booting - resetting for new acquisition...")
+                logging.info("Detector is re-booting! - resetting for new acquisition...")
                 self._reset()
                 continue
             data_list = data.split()
@@ -415,7 +415,7 @@ class DataCollector:
             self._buff_index = self._event_counter % self._buff_size
             self._event_counter += 1
 
-        logging.info("Acquisition thread shutting down")
+        logging.info("Acquisition thread shutting down...")
         self._acquisition_ended = True
 
     def acquire_data(self) -> None:
