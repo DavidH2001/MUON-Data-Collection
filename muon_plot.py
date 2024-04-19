@@ -8,19 +8,20 @@ import matplotlib.pyplot as plt
 date_time_format: str = "%Y%m%d %H%M%S.%f"
 
 
-def get_data(directory) -> (pd.DataFrame, pd.DataFrame):
+def get_data(dir: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
     """
     Get all event data from the specified directory.
     :param directory: Root directly holding the event data.
     :return:
     """
-    file_list = [file for file in listdir(directory) if file.endswith('csv')]
-
-    start_indices = []
+    file_list = [file for file in listdir(dir) if file.endswith('csv')]
+    win_f_df = None
+    median_f_df = None
+    sipm_df = None
     for i, file in enumerate(file_list):
         print(file)
 
-        df = pd.read_csv(join(directory, file), skiprows=1)
+        df = pd.read_csv(join(dir, file), skiprows=1)
         # extract frequency rows
         if i == 0:
             win_f_df = df.loc[df['win_f'].notna()]
@@ -43,16 +44,12 @@ def get_data(directory) -> (pd.DataFrame, pd.DataFrame):
     return win_f_df, median_f_df, sipm_df
 
 
-def get_data_folders(directory_list: str, sub_folder: str = None):
-
-    # directory_list = [x for x in listdir(directory) if os.path.isdir(x)]
-    #directory_list = [os.path.join(directory, name) for name in os.listdir(directory) if
-    #                  os.path.isdir(os.path.join(directory, name))]
+def get_data_dirs(dir_list: str, sub_folder: str = None) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
 
     win_f_df = None
     median_f_df = None
     sipm_df = None
-    for i, directory in enumerate(directory_list):
+    for i, directory in enumerate(dir_list):
         print(directory)
 
         if i == 0:
@@ -83,21 +80,27 @@ if not single_dir_name:
 fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
 # second y axis for sipm values
 ax1_2 = ax1.twinx()
+ax1.set_xlabel('Date/Time (UTC)')
+ax1.set_ylabel('Frequency (Hz)')
+ax1_2.set_ylabel('SIPM')
 
-win_f_df, median_f_d, sipm = get_data_folders(directory_list, "all")
 
-ax1_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3)
+win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "all")
+
 ax1.plot(win_f_df['time'].values, win_f_df['win_f'].values, 'g-')
 ax1.plot(win_f_df['time'].values, win_f_df['median_f'].values, 'r+')
+ax1_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)# markerfacecolor=(1, 1, 0, 0.5))
 ax1.grid()
 
 if True: #if os.path.exists(os.path.join(root_dir, "anomaly")):
-    win_f_df, median_f_d, sipm = get_data_folders(directory_list, "anomaly")
+    ax2.set_xlabel('Date/Time (UTC)')
+    ax2.set_ylabel('Frequency (Hz)')
+    win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "anomaly")
     ax2.plot(win_f_df['time'].values, win_f_df['win_f'].values, 'g-')
     ax2.grid()
 
 plt.tight_layout()
 plt.gcf().autofmt_xdate()
 plt.show()
-a=1
+
 
