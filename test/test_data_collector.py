@@ -162,67 +162,202 @@ class DataCollectorTest(unittest.TestCase):
                                   window_size=3)
             self.assertTrue("Require buff size is an odd multiple of window size." in str(context.exception))
 
-    def test_data_collector_event_consumption(self):
+    # def test_data_collector_event_consumption(self):
+    #     """This test consumes event data from the mocked serial comm port which is defined in the above setup()
+    #     function. Using the test class member variable max_events_to_be_processed, the event data is consumed in a
+    #     number of consecutive batches testing the collector status as we go. This test defines a buffer of 12 events
+    #     using a window size of 4 events which results in a frequency array of size 3.
+    #     """
+    #     window_size = 4
+    #     with DataCollector(self.mock_com_port,
+    #                        buff_size=12,
+    #                        window_size=window_size,
+    #                        save_results=True,
+    #                        ignore_header_size=0,
+    #                        use_arduino_time=self.use_arduino_time,
+    #                        max_median_frequency=15.0) as data_collector:
+    #
+    #         # Collect 1 window length of events so frequency array should contain 1 value.
+    #         self.max_events_to_be_processed = window_size + 1
+    #         # Middle data buffer only contained 7 events so file should be empty.
+    #         data_collector.acquire_data()
+    #         while not data_collector.processing_ended:
+    #             sleep(0.01)
+    #         self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
+    #         f = data_collector.frequency_array.copy()
+    #         self.assertTrue(f[1] == f[2] == 0.0)
+    #         self.assertTrue(int(f[0]) > 9.0 and f[0] < 14.0)
+    #
+    #         # Collect another window length of events so frequency array should contain 2 values.
+    #         self.max_events_to_be_processed = 2 * window_size + 1
+    #         data_collector.acquire_data()
+    #         while not data_collector.processing_ended:
+    #             sleep(0.01)
+    #         self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
+    #         f2 = data_collector.frequency_array.copy()
+    #         self.assertTrue(f[0] == f2[0])
+    #         self.assertTrue(int(f2[1]) > 9.0 and f2[1] < 14.0)
+    #         self.assertTrue(f2[2] == 0.0)
+    #
+    #         # Collect another window length of events so frequency array should now be full of 3 values.
+    #         self.max_events_to_be_processed = 3 * window_size + 1
+    #         # Middle data buffer only contained 7 events so file should be empty.
+    #         data_collector.acquire_data()
+    #         while not data_collector.processing_ended:
+    #             sleep(0.01)
+    #         self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
+    #         f3 = data_collector.frequency_array.copy()
+    #         self.assertTrue(f3[0] == f2[0])
+    #         self.assertTrue(f3[1] == f2[1])
+    #         self.assertTrue(f3[2] != f2[2])
+    #
+    #         # Collect another window length of events so frequency array should remain full and first (original)
+    #         # value overwritten.
+    #         self.max_events_to_be_processed = 4 * window_size + 1
+    #         # Middle data buffer only contained 7 events so file should be empty.
+    #         data_collector.acquire_data()
+    #         while not data_collector.processing_ended:
+    #             sleep(0.01)
+    #         self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
+    #         f4 = data_collector.frequency_array.copy()
+    #         self.assertTrue(f4[0] == f3[1])
+    #         self.assertTrue(f4[1] == f3[2])
+    #         self.assertTrue(f4[2] != f3[2])
+
+    def test_data_collector_frequency_array_population(self):
         """This test consumes event data from the mocked serial comm port which is defined in the above setup()
         function. Using the test class member variable max_events_to_be_processed, the event data is consumed in a
         number of consecutive batches testing the collector status as we go. This test defines a buffer of 12 events
         using a window size of 4 events which results in a frequency array of size 3.
         """
         window_size = 4
+        buff_size = 12
         with DataCollector(self.mock_com_port,
-                           buff_size=12,
+                           buff_size=buff_size,
                            window_size=window_size,
                            save_results=True,
                            ignore_header_size=0,
                            use_arduino_time=self.use_arduino_time,
-                           max_median_frequency=15.0) as data_collector:
-
+                           max_median_frequency=15.0) as dc:
             # Collect 1 window length of events so frequency array should contain 1 value.
-            self.max_events_to_be_processed = window_size + 1
+            self.max_events_to_be_processed = window_size
             # Middle data buffer only contained 7 events so file should be empty.
-            data_collector.acquire_data()
-            while not data_collector.processing_ended:
+            dc.acquire_data()
+            while not dc.processing_ended:
                 sleep(0.01)
-            self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
-            f = data_collector.frequency_array.copy()
-            self.assertTrue(f[1] == f[2] == 0.0)
-            self.assertTrue(int(f[0]) > 9.0 and f[0] < 14.0)
+            self.assertEqual(dc.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(dc._buff_index, window_size)
+            self.assertTrue(np.allclose(dc._frequency_array[1:], np.zeros(buff_size - 1)))
+            self.assertGreater(dc._frequency_array[0], 1.0)
+            f1 = dc.frequency_array.copy()
 
-            # Collect another window length of events so frequency array should contain 2 values.
-            self.max_events_to_be_processed = 2 * window_size + 1
-            data_collector.acquire_data()
-            while not data_collector.processing_ended:
-                sleep(0.01)
-            self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
-            f2 = data_collector.frequency_array.copy()
-            self.assertTrue(f[0] == f2[0])
-            self.assertTrue(int(f2[1]) > 9.0 and f2[1] < 14.0)
-            self.assertTrue(f2[2] == 0.0)
-
-            # Collect another window length of events so frequency array should now be full of 3 values.
-            self.max_events_to_be_processed = 3 * window_size + 1
+            # Collect another window length of events so frequency array should now contain an additional value for
+            # each subsequent event.
+            self.max_events_to_be_processed = 2 * window_size
             # Middle data buffer only contained 7 events so file should be empty.
-            data_collector.acquire_data()
-            while not data_collector.processing_ended:
+            dc.acquire_data()
+            while not dc.processing_ended:
                 sleep(0.01)
-            self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
-            f3 = data_collector.frequency_array.copy()
-            self.assertTrue(f3[0] == f2[0])
-            self.assertTrue(f3[1] == f2[1])
-            self.assertTrue(f3[2] != f2[2])
+            self.assertEqual(dc.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(dc._buff_index, 2 * window_size)
+            self.assertTrue(np.allclose(dc._frequency_array[5:], np.zeros(buff_size - 5)))
+            self.assertEqual(f1[0], dc._frequency_array[0])
+            self.assertGreater(dc._frequency_array[1], 1.0)
+            self.assertGreater(dc._frequency_array[2], 1.0)
+            self.assertGreater(dc._frequency_array[3], 1.0)
+            self.assertGreater(dc._frequency_array[4], 1.0)
+            f2 = dc.frequency_array.copy()
 
-            # Collect another window length of events so frequency array should remain full and first (original)
-            # value overwritten.
-            self.max_events_to_be_processed = 4 * window_size + 1
+            # Collect another 1 window lengths (now 3 in total) which means we should have reached end of buffer.
+            self.max_events_to_be_processed = 3 * window_size
             # Middle data buffer only contained 7 events so file should be empty.
-            data_collector.acquire_data()
-            while not data_collector.processing_ended:
+            dc.acquire_data()
+            while not dc.processing_ended:
                 sleep(0.01)
-            self.assertEqual(data_collector.event_counter, self.max_events_to_be_processed)
-            f4 = data_collector.frequency_array.copy()
-            self.assertTrue(f4[0] == f3[1])
-            self.assertTrue(f4[1] == f3[2])
-            self.assertTrue(f4[2] != f3[2])
+            self.assertEqual(dc.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(dc._buff_index, 0)
+            self.assertGreater(dc._frequency_array[0], 1.0)
+            self.assertEqual(f2[0], dc._frequency_array[0])
+            self.assertEqual(f2[1], dc._frequency_array[1])
+            self.assertEqual(f2[2], dc._frequency_array[2])
+            self.assertEqual(f2[3], dc._frequency_array[3])
+            self.assertEqual(f2[4], dc._frequency_array[4])
+            self.assertGreater(dc._frequency_array[5], 1.0)
+            self.assertGreater(dc._frequency_array[6], 1.0)
+            self.assertGreater(dc._frequency_array[7], 1.0)
+            self.assertGreater(dc._frequency_array[8], 1.0)
+            self.assertEqual(dc._frequency_array[9], 0.0)
+            self.assertEqual(dc._frequency_array[10], 0.0)
+            self.assertEqual(dc._frequency_array[11], 0.0)
+            f3 = dc.frequency_array.copy()
+
+            # Collect another 1 window lengths (now 4 in total) which means we should have wrapped round.
+            self.max_events_to_be_processed = 4 * window_size
+            dc.acquire_data()
+            while not dc.processing_ended:
+                sleep(0.01)
+            self.assertEqual(dc.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(dc._buff_index, 4)
+            # remember that the frequency array shifts to the left
+            self.assertEqual(dc._frequency_array[0], f3[1])
+            self.assertEqual(dc._frequency_array[1], f3[2])
+            self.assertEqual(dc._frequency_array[2], f3[3])
+            self.assertEqual(dc._frequency_array[3], f3[4])
+            self.assertEqual(dc._frequency_array[4], f3[5])
+            self.assertEqual(dc._frequency_array[5], f3[6])
+            self.assertEqual(dc._frequency_array[6], f3[7])
+            self.assertEqual(dc._frequency_array[7], f3[8])
+            self.assertGreater(dc._frequency_array[8], 1.0)
+            self.assertGreater(dc._frequency_array[9], 1.0)
+            self.assertGreater(dc._frequency_array[10], 1.0)
+            self.assertGreater(dc._frequency_array[11], 1.0)
+            f4 = dc.frequency_array.copy()
+
+            # Collect another 2 events.
+            self.max_events_to_be_processed = 4 * window_size + 2
+            dc.acquire_data()
+            while not dc.processing_ended:
+                sleep(0.01)
+            self.assertEqual(dc.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(dc._buff_index, 6)
+            # remember that the frequency array shifts to the left
+            self.assertEqual(dc._frequency_array[0], f4[2])
+            self.assertEqual(dc._frequency_array[1], f4[3])
+            self.assertEqual(dc._frequency_array[2], f4[4])
+            self.assertEqual(dc._frequency_array[3], f4[5])
+            self.assertEqual(dc._frequency_array[4], f4[6])
+            self.assertEqual(dc._frequency_array[5], f4[7])
+            self.assertEqual(dc._frequency_array[6], f4[8])
+            self.assertEqual(dc._frequency_array[7], f4[9])
+            self.assertEqual(dc._frequency_array[8], f4[10])
+            self.assertEqual(dc._frequency_array[9], f4[11])
+
+    def test_median_frequency(self):
+        """Test the calculation of median on filling the frequency array."""
+        window_size = 4
+        buff_size = 12
+        with DataCollector(self.mock_com_port,
+                           buff_size=buff_size,
+                           window_size=window_size,
+                           save_results=True,
+                           ignore_header_size=0,
+                           use_arduino_time=self.use_arduino_time,
+                           max_median_frequency=15.0) as dc:
+            # Collect a buffer
+            self.max_events_to_be_processed = buff_size
+            dc.acquire_data()
+            while not dc.processing_ended:
+                sleep(0.01)
+            # Note the frequency array is not yet full as wait for the first window of events to be received before
+            # start filling it.
+            self.assertEqual(dc._frequency_median, 0.0)
+            # now collect required remaining events to fill the frequency array.
+            self.max_events_to_be_processed = buff_size + window_size - 1
+            dc.acquire_data()
+            while not dc.processing_ended:
+                sleep(0.01)
+            expected_median = np.median(dc.frequency_array)
+            self.assertEqual(dc._frequency_median, expected_median)
 
     def test_data_collector_exceed_max_median_frequency(self):
         """Test data collector exits due to high median frequency detected."""
@@ -260,7 +395,7 @@ class DataCollectorTest(unittest.TestCase):
                 while not data_collector.processing_ended:
                     sleep(0.01)
 
-                self.assertEqual(len(data_collector.saved_file_names), 2)
+                self.assertEqual(len(data_collector.saved_file_names), 3)
                 file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
                 self.assertTrue(os.path.isfile(file_path))
                 df = pd.read_csv(file_path, skiprows=1)

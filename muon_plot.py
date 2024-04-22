@@ -81,7 +81,7 @@ fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
 # second y axis for sipm values
 ax1_2 = ax1.twinx()
 ax1.set_xlabel('Date/Time (UTC)')
-ax1.set_ylabel('Frequency (Hz)')
+ax1.set_ylabel('Window Freq (Hz)')
 ax1_2.set_ylabel('SIPM')
 
 
@@ -94,7 +94,7 @@ ax1.grid()
 
 if True: #if os.path.exists(os.path.join(root_dir, "anomaly")):
     ax2.set_xlabel('Date/Time (UTC)')
-    ax2.set_ylabel('Frequency (Hz)')
+    ax2.set_ylabel('Window Freq (Hz)')
     win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "anomaly")
     ax2.plot(win_f_df['time'].values, win_f_df['win_f'].values, 'g-')
     ax2.grid()
