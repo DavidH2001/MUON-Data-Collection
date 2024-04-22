@@ -234,16 +234,21 @@ class DataCollector:
 
     def _write_csv(self, file_path):
         """Write event data as CSV file."""
+        if os.path.isfile(file_path):
+            logging.info(f"File {file_path} already exists so aborting save!")
+            return False
+        self._saved_file_names.append(file_path)
         with open(file_path, 'a') as f:
             f.write(f"{VERSION}, {self._user_id}, {self._buff_size}, {self._window_size}, {self._anomaly_threshold}\n")
             self._buff.to_csv(f, index=False, date_format=DATE_TIME_FORMAT, lineterminator='\n')
+        return True
 
     def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""
         # name of saved file is based on time of the penultimate entry in the buffer
         file_name = pd.to_datetime(self._buff['comp_time'][self._buff_index - 1]).strftime("%Y%m%d-%H%M%S.csv")
-        # use the oldest date in buffer for file name
-        self._saved_file_names.append(file_name)
+        print(file_name)
+        print(self._buff)
         # save buffer locally
         file_dir = os.path.join(self._save_dir, sub_dir)
         if not os.path.isdir(file_dir):
@@ -252,10 +257,10 @@ class DataCollector:
         file_path = os.path.join(file_dir, file_name)
         logging.info(f"Saving buffer to file {file_path}")
         # self._buff.to_csv(file_path, index=False, date_format=date_time_format)
-        self._write_csv(file_path)
-        if sub_dir == "anomaly":
-            # queue buffer file name to be saved remotely on separate thread
-            self._file_queue.put(file_path)
+        if self._write_csv(file_path):
+            if sub_dir == "anomaly":
+                # queue buffer file name to be saved remotely on separate thread
+                self._file_queue.put(file_path)
 
     def _check_for_anomaly(self, mid_frequency) -> bool:
         """Check for event anomaly."""
