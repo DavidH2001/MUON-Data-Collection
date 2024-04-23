@@ -18,7 +18,7 @@ from ftplib import FTP
 from datetime import datetime, timezone
 
 DATE_TIME_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
-VERSION: str = "0.1.0"
+VERSION: str = "0.2.0"
 
 
 class Status(Enum):
@@ -307,6 +307,7 @@ class DataCollector:
         return True
 
     def _update_median_frequency(self):
+        """Add median frequency entry to buff."""
         self._frequency_median = np.median(self._frequency_array)
         if self._frequency_median > self._max_median_frequency:
             logging.info(f"Median frequency {self._frequency_median} exceeded maximum {self._max_median_frequency}")
@@ -315,7 +316,6 @@ class DataCollector:
             return False
         logging.info(f"buffer median frequency: {self._frequency_median}")
         self._buff.loc[self._buff_size - 1, 'median_f'] = self._frequency_median
-
 
     def _reset(self):
         """Reset parameters required for re-start."""
@@ -426,15 +426,19 @@ class DataCollector:
             if self._event_counter >= self._window_size:
                 if not self._update_frequency_history(self._buff_index):
                     break
+
+            # anomaly check
             if self._anomaly_threshold != 0.0 and self._frequency_array_full:
                 if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
+                    self._buff.loc[self._mid_frequency_index, 'event'] = \
+                        -self._buff.loc[self._mid_frequency_index, 'event']
                     if self._save_dir and self._ignore_event_count == 0:
                         self._ignore_event_count = 2 * self._window_size
                         self._save_buff("anomaly")
 
+            # end of buffer check
             self._buff_index = self._event_counter % self._buff_size
             if self._buff_index == 0:
-                # buffer has been filled
                 self._update_median_frequency()
                 if self._log_all_events:
                     self._save_buff("all")
