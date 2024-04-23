@@ -276,51 +276,6 @@ class DataCollector:
             return True
         return False
 
-    # def _update_frequency_history(self, cur_buff_index: int) -> bool:
-    #     """With a new window set of data available update the window event frequency history and look for anomalies."""
-    #     window_data = self._buff.copy().iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
-    #     window_data.loc[window_data.index[:], 'comp_time'] = (
-    #         pd.to_datetime(window_data.loc[window_data.index[:], 'comp_time'], format=self._date_time_format))
-    #     windows_time_diff = (window_data.loc[window_data.index[-1], 'comp_time'] -
-    #                          window_data.loc[window_data.index[0], 'comp_time'])
-    #     arduino_time_diff = (int(window_data.loc[window_data.index[-1], 'arduino_time']) -
-    #                          int(window_data.loc[window_data.index[0], 'arduino_time'])) / 1000.0
-    #     window_freq = len(window_data) / windows_time_diff.total_seconds()
-    #     if self._frequency_array_full:
-    #         # update buffer by removing the oldest window frequency and adding latest frequency
-    #         self._frequency_array = np.roll(self._frequency_array, -1)
-    #         self._frequency_array[-1] = window_freq
-    #     else:
-    #         # first time filling of frequency array
-    #         self._frequency_array[self._frequency_index] = window_freq
-    #     logging.debug(f"window time (s) = {windows_time_diff.total_seconds()} arduino time (s) = {arduino_time_diff} "
-    #                   f"window frequency[{self._frequency_index}] = {window_freq}")
-    #     self._buff.loc[cur_buff_index, 'win_f'] = window_freq
-    #
-    #     self._frequency_index += 1
-    #     if self._frequency_index == len(self._frequency_array):
-    #         # end of frequency array reached
-    #         self._frequency_index = 0
-    #         self._frequency_array_full = True
-    #         # frequency array (and hence event buffer) is now full so start to capture current frequency median
-    #         self._frequency_median = np.median(self._frequency_array)
-    #         if self._frequency_median > self._max_median_frequency:
-    #             logging.info(f"Median frequency {self._frequency_median} exceeded maximum {self._max_median_frequency}")
-    #             logging.info("Check that you running in coincidence mode and connected to the S-detector")
-    #             self._status = Status.MEDIAN_FREQUENCY_EXCEEDED
-    #             return False
-    #         logging.info(f"buffer median frequency: {self._frequency_median}")
-    #         self._buff.loc[cur_buff_index, 'median_f'] = self._frequency_median
-    #         if self._log_all_events:
-    #             self._save_buff("all")
-    #
-    #     # TODO Move this out to main loop.
-    #     if self._anomaly_threshold != 0.0 and self._frequency_array_full:
-    #         if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
-    #             if self._save_dir:
-    #                 self._save_buff("anomaly")
-    #     return True
-
     def _update_frequency_history(self, cur_buff_index: int) -> bool:
         """With a new window set of data available update the window event frequency history and look for anomalies."""
         # window_data = self._buff.copy().iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
@@ -343,30 +298,12 @@ class DataCollector:
         logging.debug(f"window time (s) = {windows_time_diff.total_seconds()} arduino time (s) = {arduino_time_diff} "
                       f"window frequency[{self._frequency_index}] = {window_freq}")
         self._buff.loc[cur_buff_index, 'win_f'] = window_freq
-
         self._frequency_index += 1
         if self._frequency_index == len(self._frequency_array):
             # end of frequency array reached
             self._frequency_index = 0
             self._frequency_array_full = True
-            # # frequency array (and hence event buffer) is now full so start to capture current frequency median
-            # self._frequency_median = np.median(self._frequency_array)
-            # if self._frequency_median > self._max_median_frequency:
-            #     logging.info(f"Median frequency {self._frequency_median} exceeded maximum {self._max_median_frequency}")
-            #     logging.info("Check that you running in coincidence mode and connected to the S-detector")
-            #     self._status = Status.MEDIAN_FREQUENCY_EXCEEDED
-            #     return False
-            # logging.info(f"buffer median frequency: {self._frequency_median}")
-            # self._buff.loc[cur_buff_index, 'median_f'] = self._frequency_median
 
-            # if self._log_all_events:
-            #     self._save_buff("all")
-
-        # # TODO Move this out to main loop.
-        # if self._anomaly_threshold != 0.0 and self._frequency_array_full:
-        #     if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
-        #         if self._save_dir:
-        #             self._save_buff("anomaly")
         return True
 
     def _update_median_frequency(self):
@@ -469,7 +406,7 @@ class DataCollector:
                     # fill buffer for first time
                     self._buff.loc[len(self._buff)] = data_list
                 else:
-                    # Repeat filling of buffer. Note start from the beginning overwriting the oldest values.
+                    # repeat filling of buffer. Note start from the beginning overwriting the oldest values
                     self._buff.loc[self._buff_index] = data_list
                 # preserve the buff indices that reflect the latest window
                 self._window_buff_indices[self._window_index] = self._buff_index
@@ -486,30 +423,21 @@ class DataCollector:
                 print("---------------------------------------")
                 sys.exit(0)
 
-            # TODO Replace this with the following i.e., update frequency array for every event
-            # if self._event_counter and not self._event_counter % self._window_size:
-            #     # next event window full
-            #     if not self._update_frequency_history(self._buff_index):
-            #         break
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!NEW!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             if self._event_counter >= self._window_size:
                 if not self._update_frequency_history(self._buff_index):
                     break
-
-            # TODO put check for anomaly here. Call it for every event after buffer is full.
             if self._anomaly_threshold != 0.0 and self._frequency_array_full:
                 if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
                     if self._save_dir and self._ignore_event_count == 0:
                         self._ignore_event_count = 2 * self._window_size
                         self._save_buff("anomaly")
 
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             self._buff_index = self._event_counter % self._buff_size
             if self._buff_index == 0:
+                # buffer has been filled
                 self._update_median_frequency()
                 if self._log_all_events:
                     self._save_buff("all")
-
 
         logging.info("Acquisition thread shutting down...")
         self._acquisition_ended = True

@@ -20,7 +20,6 @@ def get_data(dir: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
     sipm_df = None
     for i, file in enumerate(file_list):
         print(file)
-
         df = pd.read_csv(join(dir, file), skiprows=1)
         # extract frequency rows
         if i == 0:
@@ -45,13 +44,12 @@ def get_data(dir: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
 
 
 def get_data_dirs(dir_list: str, sub_folder: str = None) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
-
+    """Get data from all listed directories."""
     win_f_df = None
     median_f_df = None
     sipm_df = None
     for i, directory in enumerate(dir_list):
         print(directory)
-
         if i == 0:
             win_f_df, median_f_df, sipm_df = get_data(os.path.join(directory, sub_folder))
         else:
@@ -69,7 +67,7 @@ with open("config.json") as json_data_file:
 # select folder(s) to be accessed for event data
 root_dir = os.path.expanduser(config['event_files']['root_dir'])
 # single folder
-single_dir_name = "240418_175256"
+single_dir_name = ""
 directory_list = [os.path.join(root_dir, single_dir_name)]
 # all folders
 if not single_dir_name:
