@@ -249,6 +249,7 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._buff_index, window_size)
             self.assertTrue(np.allclose(dc._frequency_array[1:], np.zeros(buff_size - 1)))
             self.assertGreater(dc._frequency_array[0], 1.0)
+            self.assertEqual(dc._buff.loc[3, 'win_f'], dc._frequency_array[0])
             f1 = dc.frequency_array.copy()
 
             # Collect another window length of events so frequency array should now contain an additional value for
@@ -266,11 +267,14 @@ class DataCollectorTest(unittest.TestCase):
             self.assertGreater(dc._frequency_array[2], 1.0)
             self.assertGreater(dc._frequency_array[3], 1.0)
             self.assertGreater(dc._frequency_array[4], 1.0)
+            self.assertEqual(dc._buff.loc[4, 'win_f'], dc._frequency_array[1])
+            self.assertEqual(dc._buff.loc[5, 'win_f'], dc._frequency_array[2])
+            self.assertEqual(dc._buff.loc[6, 'win_f'], dc._frequency_array[3])
+            self.assertEqual(dc._buff.loc[7, 'win_f'], dc._frequency_array[4])
             f2 = dc.frequency_array.copy()
 
             # Collect another 1 window lengths (now 3 in total) which means we should have reached end of buffer.
             self.max_events_to_be_processed = 3 * window_size
-            # Middle data buffer only contained 7 events so file should be empty.
             dc.acquire_data()
             while not dc.processing_ended:
                 sleep(0.01)
@@ -289,6 +293,10 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._frequency_array[9], 0.0)
             self.assertEqual(dc._frequency_array[10], 0.0)
             self.assertEqual(dc._frequency_array[11], 0.0)
+            self.assertEqual(dc._buff.loc[8, 'win_f'], dc._frequency_array[5])
+            self.assertEqual(dc._buff.loc[9, 'win_f'], dc._frequency_array[6])
+            self.assertEqual(dc._buff.loc[10, 'win_f'], dc._frequency_array[7])
+            self.assertEqual(dc._buff.loc[11, 'win_f'], dc._frequency_array[8])
             f3 = dc.frequency_array.copy()
 
             # Collect another 1 window lengths (now 4 in total) which means we should have wrapped round.
@@ -311,6 +319,10 @@ class DataCollectorTest(unittest.TestCase):
             self.assertGreater(dc._frequency_array[9], 1.0)
             self.assertGreater(dc._frequency_array[10], 1.0)
             self.assertGreater(dc._frequency_array[11], 1.0)
+            self.assertEqual(dc._buff.loc[0, 'win_f'], dc._frequency_array[8])
+            self.assertEqual(dc._buff.loc[1, 'win_f'], dc._frequency_array[9])
+            self.assertEqual(dc._buff.loc[2, 'win_f'], dc._frequency_array[10])
+            self.assertEqual(dc._buff.loc[3, 'win_f'], dc._frequency_array[11])
             f4 = dc.frequency_array.copy()
 
             # Collect another 2 events.
@@ -331,6 +343,18 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._frequency_array[7], f4[9])
             self.assertEqual(dc._frequency_array[8], f4[10])
             self.assertEqual(dc._frequency_array[9], f4[11])
+            self.assertEqual(dc._buff.loc[0, 'win_f'], dc._frequency_array[6])
+            self.assertEqual(dc._buff.loc[1, 'win_f'], dc._frequency_array[7])
+            self.assertEqual(dc._buff.loc[2, 'win_f'], dc._frequency_array[8])
+            self.assertEqual(dc._buff.loc[3, 'win_f'], dc._frequency_array[9])
+            self.assertEqual(dc._buff.loc[4, 'win_f'], dc._frequency_array[10])
+            self.assertEqual(dc._buff.loc[5, 'win_f'], dc._frequency_array[11])
+            self.assertEqual(dc._buff.loc[6, 'win_f'], dc._frequency_array[0])
+            self.assertEqual(dc._buff.loc[7, 'win_f'], dc._frequency_array[1])
+            self.assertEqual(dc._buff.loc[8, 'win_f'], dc._frequency_array[2])
+            self.assertEqual(dc._buff.loc[9, 'win_f'], dc._frequency_array[3])
+            self.assertEqual(dc._buff.loc[10, 'win_f'], dc._frequency_array[4])
+            self.assertEqual(dc._buff.loc[11, 'win_f'], dc._frequency_array[5])
 
     def test_median_frequency(self):
         """Test the calculation of median on filling the frequency array."""
@@ -344,15 +368,15 @@ class DataCollectorTest(unittest.TestCase):
                            use_arduino_time=self.use_arduino_time,
                            max_median_frequency=15.0) as dc:
             # Collect a buffer
-            self.max_events_to_be_processed = buff_size
+            self.max_events_to_be_processed = buff_size - 1
             dc.acquire_data()
             while not dc.processing_ended:
                 sleep(0.01)
             # Note the frequency array is not yet full as wait for the first window of events to be received before
             # start filling it.
             self.assertEqual(dc._frequency_median, 0.0)
-            # now collect required remaining events to fill the frequency array.
-            self.max_events_to_be_processed = buff_size + window_size - 1
+            # now collect required remaining event to fill the frequency array.
+            self.max_events_to_be_processed = buff_size
             dc.acquire_data()
             while not dc.processing_ended:
                 sleep(0.01)
@@ -395,7 +419,7 @@ class DataCollectorTest(unittest.TestCase):
                 while not data_collector.processing_ended:
                     sleep(0.01)
 
-                self.assertIn(len(data_collector.saved_file_names), [2, 3])
+                self.assertIn(len(data_collector.saved_file_names), [2])
                 file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
                 self.assertTrue(os.path.isfile(file_path))
                 df = pd.read_csv(file_path, skiprows=1)
@@ -410,7 +434,7 @@ class DataCollectorTest(unittest.TestCase):
                 self.assertEqual(df.shape, (buff_size, 9))
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check low anomaly is in center of saved event buffer
-                self.assertIn(df['event'][df.shape[0] // 2], [104, 105])
+                self.assertIn(df['event'][df.shape[0] // 2], [105])
 
     def test_data_collector_log_all_events(self):
         """Test logging of all events to file."""
@@ -441,17 +465,18 @@ class DataCollectorTest(unittest.TestCase):
                 file_path = os.path.join(temp_dir, "all", data_collector.saved_file_names[0])
                 df = pd.read_csv(file_path, skiprows=1)
                 self.assertTrue(os.path.isfile(file_path))
-                # confirm we have 3 window frequencies at required positions
+                # confirm we have window frequencies at required positions
                 states = df['win_f'].notna()
-                self.assertTrue(np.array_equal(np.where(states)[0], np.array([9, 19, 29])))
-                win_f_array = df[df['win_f'].notna()]['win_f'].values
-                self.assertEqual(win_f_array.size, 3)
+                self.assertTrue(np.array_equal(np.where(states)[0], np.arange(window_size - 1, buff_size)))
+                win_f_array = df['win_f']
+                # replace missing frequencies in first buffer with 0.0 so as we match collectors calculation for median
+                win_f_array = win_f_array.fillna(0.0).values
                 # confirm we have 1 median frequency at required position and check correct against window frequencies
                 states = df['median_f'].notna()
                 self.assertTrue(np.array_equal(np.where(states)[0], np.array([29])))
                 median_f_array = df[df['median_f'].notna()]['median_f'].values
                 self.assertEqual(median_f_array.size, 1)
-                self.assertEqual(np.median(win_f_array), median_f_array[0])
+                self.assertAlmostEqual(np.median(win_f_array), median_f_array[0])
 
     def test_data_collector_start_string(self):
         """Test start acquisition trigger string."""
