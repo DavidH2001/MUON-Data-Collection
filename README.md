@@ -6,11 +6,11 @@ Muon detectors.
 ## Prerequisites
 
 This software has been tested with Python 3.8 and 3.9. Other 3.x version may also work. The following additional 
-packages are required to be included as part of your Python instance:
+packages are required to be included as part of your Python installation:
 
 [ftplib](https://docs.python.org/3/library/ftplib.html#module-ftplib)<br/>
 [pandas](https://pypi.org/project/pandas/)<br/>
-[pyserial](https://pypi.org/project/pyserial/0)>br/>
+[pyserial](https://pypi.org/project/pyserial/0)<br/>
 [signal](https://docs.python.org/3/library/signal.html)
 
 ## Installation
@@ -65,7 +65,10 @@ Example config.json file:
 
 ### Hardware configuration
 Set up two detectors to run in coincidence mode making sure the intended S (slave) detector is connected to the logging
-computer via a USB cable.
+computer via a USB cable. The image below shows M (top) and S (bottom) detectors running in coincidence mode. The S 
+detector is connected to a Raspberry Pi which is running the detection software. 
+
+![](/doc/image_setup.jpg)
 
 ### Running data acquisition and logging
 
