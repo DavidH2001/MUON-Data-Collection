@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-
+MUON data collection project.
+DataCollector class definition.
 """
 from enum import Enum
 import os.path
@@ -125,7 +126,7 @@ class DataCollector:
                                    'event': pd.Series(dtype='int'),
                                    'arduino_time': pd.Series(dtype='int'),
                                    'adc': pd.Series(dtype='int'),
-                                   'sipm': pd.Series(dtype='int'),
+                                   'sipm': pd.Series(dtype='float'),
                                    'dead_time': pd.Series(dtype='int'),
                                    'temp': pd.Series(dtype='float'),
                                    'win_f': pd.Series(dtype='float'),
@@ -278,7 +279,6 @@ class DataCollector:
 
     def _update_frequency_history(self, cur_buff_index: int) -> bool:
         """With a new window set of data available update the window event frequency history and look for anomalies."""
-        # window_data = self._buff.copy().iloc[cur_buff_index - (self._window_size - 1): cur_buff_index + 1]
         window_data = self._buff.iloc[self._window_buff_indices]
         window_data.loc[window_data.index[:], 'comp_time'] = (
             pd.to_datetime(window_data.loc[window_data.index[:], 'comp_time'], format=self._date_time_format))
@@ -295,8 +295,8 @@ class DataCollector:
         else:
             # first time filling of frequency array
             self._frequency_array[self._frequency_index] = window_freq
-        logging.debug(f"window time (s) = {windows_time_diff.total_seconds()} arduino time (s) = {arduino_time_diff} "
-                      f"window frequency[{self._frequency_index}] = {window_freq}")
+        # logging.debug(f"window time (s) = {windows_time_diff.total_seconds()} arduino time (s) = {arduino_time_diff} "
+        #              f"window frequency[{self._frequency_index}] = {window_freq}")
         self._buff.loc[cur_buff_index, 'win_f'] = window_freq
         self._frequency_index += 1
         if self._frequency_index == len(self._frequency_array):
@@ -339,6 +339,7 @@ class DataCollector:
         while True:
             # Wait for and read event data.
             data = self._com_port.readline()
+            # print(data)
             if data == b'':
                 continue
             if self._shut_down:
@@ -346,7 +347,7 @@ class DataCollector:
             try:
                 data = codecs.decode(data, 'UTF-8', errors='replace')
             except UnicodeDecodeError as e:
-                print("--------------decode error-------------")
+                print("--------------Decode Error-------------")
                 print(e)
                 print(data)
                 print("---------------------------------------")
@@ -390,9 +391,14 @@ class DataCollector:
             if len(data_list) < 6:
                 logging.info(f"Bad event line {data} detected")
                 continue
-
             data_list = data_list[0:6]
-            data_list.extend(['', ''])
+            data_list[0] = int(data_list[0])    # event
+            data_list[1] = int(data_list[1])    # arduino time
+            data_list[2] = int(data_list[2])    # ADC
+            data_list[3] = float(data_list[3])  # SIPM
+            data_list[4] = int(data_list[4])    # dead time
+            data_list[5] = float(data_list[5])  # temp
+            data_list.extend([np.NaN, np.NaN])
             date_time_now = datetime.now(timezone.utc)
             data_list = [date_time_now.strftime(self._date_time_format)[:-3]] + data_list
             if self._event_counter < 3:
@@ -417,7 +423,7 @@ class DataCollector:
                     self._ignore_event_count -= 1
                 self._event_counter += 1
             except ValueError as e:
-                print("------------data buff error------------")
+                print("------------Data Buff Error------------")
                 print(e)
                 print(data_list)
                 print("---------------------------------------")
@@ -430,10 +436,11 @@ class DataCollector:
             # anomaly check
             if self._anomaly_threshold != 0.0 and self._frequency_array_full:
                 if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
-                    self._buff.loc[self._mid_frequency_index, 'event'] = \
-                        -self._buff.loc[self._mid_frequency_index, 'event']
+                    # mark anomaly by changing sign of event number
+                    # self._buff.at[self._mid_frequency_index, 'event'] = \
+                    #     (-1 * self._buff.at[self._mid_frequency_index, 'event'])
                     if self._save_dir and self._ignore_event_count == 0:
-                        self._ignore_event_count = 2 * self._window_size
+                        self._ignore_event_count = 1 * self._window_size
                         self._save_buff("anomaly")
 
             # end of buffer check
@@ -445,6 +452,7 @@ class DataCollector:
 
         logging.info("Acquisition thread shutting down...")
         self._acquisition_ended = True
+
 
     def acquire_data(self) -> None:
         t2 = threading.Thread(target=self._acquire_data)

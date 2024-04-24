@@ -5,6 +5,11 @@ from os import listdir
 from os.path import join
 import matplotlib.pyplot as plt
 
+"""
+MUON data collection project.
+Plotting utility.  
+"""
+
 date_time_format: str = "%Y%m%d %H%M%S.%f"
 
 
@@ -67,7 +72,7 @@ with open("config.json") as json_data_file:
 # select folder(s) to be accessed for event data
 root_dir = os.path.expanduser(config['event_files']['root_dir'])
 # single folder
-single_dir_name = ""
+single_dir_name = "240424_104334"
 directory_list = [os.path.join(root_dir, single_dir_name)]
 # all folders
 if not single_dir_name:
@@ -76,25 +81,28 @@ if not single_dir_name:
 
 # set up for plotting
 fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
-# second y axis for sipm values
+
+# all event plotting
 ax1_2 = ax1.twinx()
 ax1.set_xlabel('Date/Time (UTC)')
 ax1.set_ylabel('Window Freq (Hz)')
-ax1_2.set_ylabel('SIPM')
-
-
+ax1_2.set_ylabel('SIPM (mV)')
 win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "all")
-
-ax1.plot(win_f_df['time'].values, win_f_df['win_f'].values, 'g-')
+ax1.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
 ax1.plot(win_f_df['time'].values, win_f_df['median_f'].values, 'r+')
-ax1_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)# markerfacecolor=(1, 1, 0, 0.5))
+ax1_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)  # markerfacecolor=(1, 1, 0, 0.5))
 ax1.grid()
+
+# anomaly plotting
+ax2_2 = ax2.twinx()
+ax2_2.set_ylabel('SIPM (mV)')
 
 if True: #if os.path.exists(os.path.join(root_dir, "anomaly")):
     ax2.set_xlabel('Date/Time (UTC)')
     ax2.set_ylabel('Window Freq (Hz)')
     win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "anomaly")
-    ax2.plot(win_f_df['time'].values, win_f_df['win_f'].values, 'g-')
+    ax2.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
+    ax2_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)
     ax2.grid()
 
 plt.tight_layout()

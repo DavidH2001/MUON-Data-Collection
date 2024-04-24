@@ -9,9 +9,9 @@
         "root_dir": "~/muon_data"
     },
     "system": {
-        "buff_size": 110,
+        "buff_size": 210,
         "window_size": 10,
-        "anomaly_threshold": 3.0,
+        "anomaly_threshold": 4.0,
         "logging_level": "DEBUG",
         "max_median_frequency": 1.0
     },

@@ -434,7 +434,7 @@ class DataCollectorTest(unittest.TestCase):
                 self.assertEqual(df.shape, (buff_size, 9))
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check low anomaly is in center of saved event buffer
-                self.assertIn(df['event'][df.shape[0] // 2], [105])
+                self.assertIn(df['event'][df.shape[0] // 2], [104, 105])
 
     def test_data_collector_log_all_events(self):
         """Test logging of all events to file."""

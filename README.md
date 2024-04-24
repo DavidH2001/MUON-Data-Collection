@@ -5,11 +5,13 @@ Muon detectors.
 
 ## Prerequisites
 
-This software has been tested with Python 3.8 and 3.9. Other 3.x version may also work. The following packages are 
-required to be included as part of your Python instance:
+This software has been tested with Python 3.8 and 3.9. Other 3.x version may also work. The following additional 
+packages are required to be included as part of your Python instance:
 
+[ftplib](https://docs.python.org/3/library/ftplib.html#module-ftplib)<br/>
 [pandas](https://pypi.org/project/pandas/)<br/>
-[pyserial](https://pypi.org/project/pyserial/0)
+[pyserial](https://pypi.org/project/pyserial/0)>br/>
+[signal](https://docs.python.org/3/library/signal.html)
 
 ## Installation
 
@@ -24,12 +26,42 @@ When you install the code you will find a template file in the project folder ca
 rename this file to *config.json* in the sme directory. Open the copied file and set the following parameters:
 
 * "user name" - designated unique name for logging event data and connecting to remote file server.
-* "user password" - designated password name for connecting to remote file server.
-* "user latitude" - float value representing the latitude of the user's detectors.
-* "user longitude" - float value representing the longitude of the user's detectors.
-* "event_files root_dir" - string defining an existing directory where your event files will be saved.
-* "system logging_level" - Set to "DEBUG" to log all details or "INFO" to log a summary.
+* "user password" - designated password name for connecting to remote file server. Can be left blank.
+* "user latitude" - float value representing the latitude of the user's detectors in degrees and decimal minutes. 
+* "user longitude" - float value representing the longitude of the user's detectors in degrees and decimal minutes.
+* "event_files root_dir" - string defining an existing directory where your event files will be saved locally.
+* "system buff_size" - size of event buffer. Leave set to default.
+* "system window_size" - size of frequency window. Leave set to default.
+* "system anomaly_threshold" - threshold used to trigger an event anomaly. Leave set to default.
+* "system logging_level" - set to "DEBUG" to log all messages or "INFO" to just log a summary.
+* "system max_median_frequency" - set to maximum median frequency allowed. Leave set to default.   
 * "remote ip_address" - IP address of remote file server. If this is left as an empty string then remote access will not be attempted.
+
+Example config.json file:
+
+```
+{
+    "user": {
+        "name": "Dave",
+        "password": "",
+        "latitude": 50.81,
+        "longitude": -1.22
+    },
+    "event_files": {
+        "root_dir": "~/muon_data"
+    },
+    "system": {
+        "buff_size": 210,
+        "window_size": 10,
+        "anomaly_threshold": 4.0,
+        "logging_level": "DEBUG",
+        "max_median_frequency": 1.0
+    },
+    "remote": {
+        "ip_address": ""
+    }
+}
+```
 
 ### Hardware configuration
 Set up two detectors to run in coincidence mode making sure the intended S (slave) detector is connected to the logging
@@ -53,3 +85,4 @@ If you have configured an IP address then the collector will attempt to connect 
 fails to connect then make sure the IP address is set correctly. You will still be able to proceed with start-up as the 
 software will retry to connect later.       
 
+When running ... a log file will be created and written to throughout 

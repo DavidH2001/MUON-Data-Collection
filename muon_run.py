@@ -10,6 +10,11 @@ import logging
 from ftplib import FTP
 from data_collector import DataCollector, VERSION
 
+"""
+MUON data collection project.
+Main runtime.  
+"""
+
 
 def serial_ports():
     """ Obtain a list of available serial port names.
@@ -37,18 +42,13 @@ def serial_ports():
 
 
 def user_interact_part_one():
+    """User interaction part 1."""
     print(f"Host platform: {sys.platform}")
     print("Connect the S-detector to a serial port on the host.")
-    # s_name = input("Enter the name of your S-detector (if set) else [return] to continue or [Q] to quit: ")
-    # if s_name.upper() == "Q":
-    #     sys.exit(0)
-    # if s_name != "":
-    #     print(f"Acquisition will only start when the host detects '{s_name}' from connected detector.")
     s_name = ""
     response = input("Select [return] to continue or [Q] to quit: ")
     if response.upper() == "Q":
         sys.exit(0)
-
     print('\nAvailable serial ports:')
     available_ports = serial_ports()
     for i, port_name in enumerate(available_ports):
@@ -61,6 +61,7 @@ def user_interact_part_one():
 
 
 def user_interact_part_two() -> bool:
+    """User interaction part 2."""
     print("Reset the M-detector and then the S-detector.")
     print("Confirm that the detector displaying 'S---' is the one connected to the serial port.")
     option = input("Select [return] to continue or [Q] to quit: ")
