@@ -139,8 +139,8 @@ def run():
     _check_config(config)
 
     root_dir = os.path.expanduser(config['event_files']['root_dir'])
-    user_id = f"{config['user']['name']}-{str(config['user']['latitude'])}-{str(config['user']['longitude'])}"
-    user_id = user_id.replace('.', '-')
+    user_id = f"{config['user']['name']}_{str(config['user']['latitude'])}_{str(config['user']['longitude'])}"
+    user_id = user_id.replace('.', '_')
     print(f"user_id={user_id}")
 
     # setup logging
@@ -187,7 +187,7 @@ def run():
 
     logging.info(f'Running detection software V{VERSION} using {log_level} logging level')
     logging.info(f"buff_size={buff_size}, window_size={window_size}, anomaly_threshold={anomaly_threshold}")
-    logging.info(f"latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
+    logging.info(f"user_id={user_id}, latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
     dc.acquire_data()
     if config['remote']['ip_address'] != "":
         dc.run_remote()
