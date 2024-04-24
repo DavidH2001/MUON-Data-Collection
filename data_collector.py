@@ -255,7 +255,7 @@ class DataCollector:
         file_dir = os.path.join(self._save_dir, sub_dir)
         if not os.path.isdir(file_dir):
             logging.info(f"Creating directory {file_dir}")
-            os.mkdirs(file_dir)
+            os.makedirs(file_dir)
         file_path = os.path.join(file_dir, file_name)
         logging.info(f"Saving buffer to file {file_path}")
         # self._buff.to_csv(file_path, index=False, date_format=date_time_format)
@@ -267,13 +267,13 @@ class DataCollector:
     def _check_for_anomaly(self, mid_frequency) -> bool:
         """Check for event anomaly."""
         logging.debug(f"Checking mid buff[{self._mid_frequency_index}] window freq: "
-                      f"{mid_frequency} against median frequency {self._frequency_median} "
+                      f"{mid_frequency:.3f} against median frequency {self._frequency_median:.3f} "
                       f"ignore_event_count: {self._ignore_event_count }")
         if mid_frequency > self._frequency_median * self._anomaly_threshold:
-            logging.info(f"HIGH ANOMALY DETECTED at frequency {mid_frequency}")
+            logging.info(f"HIGH ANOMALY DETECTED at frequency {mid_frequency:.3f}")
             return True
         if mid_frequency < self._frequency_median / self._anomaly_threshold:
-            logging.info(f"LOW ANOMALY DETECTED at frequency {mid_frequency}")
+            logging.info(f"LOW ANOMALY DETECTED at frequency {mid_frequency:.3f}")
             return True
         return False
 
@@ -310,11 +310,12 @@ class DataCollector:
         """Add median frequency entry to buff."""
         self._frequency_median = np.median(self._frequency_array)
         if self._frequency_median > self._max_median_frequency:
-            logging.info(f"Median frequency {self._frequency_median} exceeded maximum {self._max_median_frequency}")
+            logging.info(f"Median frequency {self._frequency_median:.3f} exceeded maximum "
+                         f"{self._max_median_frequency:.3f}")
             logging.info("Check that you running in coincidence mode and connected to the S-detector")
             self._status = Status.MEDIAN_FREQUENCY_EXCEEDED
             return False
-        logging.info(f"buffer median frequency: {self._frequency_median}")
+        logging.info(f"buffer median frequency: {self._frequency_median:.3f}")
         self._buff.loc[self._buff_size - 1, 'median_f'] = self._frequency_median
 
     def _reset(self):
@@ -465,9 +466,8 @@ class DataCollector:
         t1.start()
 
     def _signal_handler(self, signal, frame):
-        """
-        Ctrl-c signal handler. Note this can result in an error being generated if
-        we are currently blocking on com_port.readline()
+        """Ctrl-C (and Z?) signal handler. Note this can result in an error being generated if we are currently
+           blocking on com_port.readline().
         """
         logging.info('Ctrl-C detected - shutting down...')
         # if self._com_port is not None:

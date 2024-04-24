@@ -29,7 +29,7 @@ rename this file to *config.json* in the sme directory. Open the copied file and
 * "user password" - designated password name for connecting to remote file server. Can be left blank.
 * "user latitude" - float value representing the latitude of the user's detectors in degrees and decimal minutes. 
 * "user longitude" - float value representing the longitude of the user's detectors in degrees and decimal minutes.
-* "event_files root_dir" - string defining an existing directory where your event files will be saved locally.
+* "event_files root_dir" - string defining an existing directory where your event files will be saved locally. you must create this directory.
 * "system buff_size" - size of event buffer. Leave set to default.
 * "system window_size" - size of frequency window. Leave set to default.
 * "system anomaly_threshold" - threshold used to trigger an event anomaly. Leave set to default.
