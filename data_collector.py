@@ -29,7 +29,7 @@ class Status(Enum):
 
 class DataCollector:
     """Data collector object class.
-
+    UPDATE THIS !!!
     This class is used to consume event data from a serial comm port and process it by looking for acquisition frequency
     (high/low) anomalies. When an anomaly is detected the event data buffer is saved to a file.
 
