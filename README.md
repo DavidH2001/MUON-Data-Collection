@@ -89,3 +89,5 @@ fails to connect then make sure the IP address is set correctly. You will still 
 software will retry to connect later.       
 
 When running ... a log file will be created and written to throughout 
+
+If system needs ti be shutdown of fails for some reason then restart it...

@@ -148,7 +148,8 @@ def run():
     start_time = datetime.now(timezone.utc).strftime("%y%m%d_%H%M%S")
     root_dir = os.path.join(root_dir, start_time)
     if not os.path.exists(root_dir):
-        os.mkdir(root_dir)
+        logging.info(f"Creating directory {root_dir}")
+        os.mkdirs(root_dir)
     set_logging(root_dir, log_level)
 
     if config['remote']['ip_address'] != "":

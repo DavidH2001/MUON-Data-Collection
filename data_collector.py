@@ -255,7 +255,7 @@ class DataCollector:
         file_dir = os.path.join(self._save_dir, sub_dir)
         if not os.path.isdir(file_dir):
             logging.info(f"Creating directory {file_dir}")
-            os.mkdir(file_dir)
+            os.mkdirs(file_dir)
         file_path = os.path.join(file_dir, file_name)
         logging.info(f"Saving buffer to file {file_path}")
         # self._buff.to_csv(file_path, index=False, date_format=date_time_format)
