@@ -39,7 +39,7 @@ class DataCollector:
     divided by the number of events it holds. A frequency array is used to log the corresponding window frequencies for
     the whole buffer.
 
-    When the buffer is full the logged frequencies are used to determine a baseline (median) frequency for the whole
+    When the buff is full the logged frequencies are used to determine a baseline (median) frequency for the whole
     buffer. The buffer is then refilled starting from the beginning (oldest) entry again. The window frequency array is
     also updated as each new window of events is received. The median frequency is updated when the buffer is
     re-filled which allows for any drift in the detector system.
@@ -77,9 +77,9 @@ class DataCollector:
         """
         logging.basicConfig()
         self._com_port = com_port
-        self._save_dir: str = kwargs.get('save_dir', None)
         self._saved_file_names: list = []
         self._ignore_header_size: int = kwargs.get("ignore_header_size", 0)
+        self._save_dir: str = kwargs.get('save_dir', None)
         if self._save_dir and not os.path.exists(self._save_dir):
             raise NotADirectoryError(f"The specified save directory {self._save_dir} does not exist.")
         self._buff_size: int = kwargs.get('buff_size', 90)
@@ -104,7 +104,7 @@ class DataCollector:
         self._look_for_start = True
 
         self._anomaly_threshold = kwargs.get("anomaly_threshold", 2.0)
-        self._log_all_events: bool = kwargs.get('log_all_events', '')
+        self._log_all_events: bool = kwargs.get('log_all_events', True)
         self._start_string: bool = kwargs.get('start_string', '')
         if self._start_string != '':
             self._look_for_start_string = True
@@ -250,9 +250,6 @@ class DataCollector:
         # name of saved file is based on time of the penultimate entry in the buffer
         index = self._buff_index - 1 if self._buff_index > 0 else self._buff_size - 1
         file_name = pd.to_datetime(self._buff['comp_time'][index]).strftime("%Y%m%d-%H%M%S.csv")
-        # print(file_name)
-        # print(self._buff)
-        # save buffer locally
         file_dir = os.path.join(self._save_dir, sub_dir)
         if not os.path.isdir(file_dir):
             logging.info(f"Creating directory {file_dir}")
@@ -449,7 +446,7 @@ class DataCollector:
             self._buff_index = self._event_counter % self._buff_size
             if self._buff_index == 0:
                 self._update_median_frequency()
-                if self._log_all_events:
+                if self._save_dir and self._log_all_events:
                     self._save_buff("all")
 
         logging.info("Acquisition thread shutting down...")

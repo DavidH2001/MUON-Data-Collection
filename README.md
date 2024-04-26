@@ -36,8 +36,7 @@ packages are required to be included as part of your Python installation:
 
 Click on the *Code* button found at the top of this main GitHub project page and select *Download Zip*. Unzip
 the download into a chosen directory of your computer. Alternatively, you can copy the project's URL and *git clone* the 
-software directly from the repository. This way you will be able to obtain any updates quickly and make contributions to 
-the code via a *Pull Request*. 
+software directly from the repository.  
 
 ### Software configuration
 Before you can run the software you will need to set up a number of parameters in the configuration file.
