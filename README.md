@@ -9,18 +9,18 @@ The detection software connects to the serial interface of the S-detector after 
 monitors text lines, sent from the detector, looking for a valid event sequence. Note that the S-detector must be 
 running the standard Arduino code as described [here](https://github.com/spenceraxani/CosmicWatch-Desktop-Muon-Detector-v2).
 When a valid event line is received the detection sequence will begin and continue to do so until the system detects
-a Ctrl-C signal or the system is rebooted. The detector activity can be monitored via the command line used to start it 
-or via browsing a log file written to a specified root directory. During runtime, all events are saved to a buffer 
-along with separate frequency information that is calculated using a sliding window across the buffer. The detection of 
-anomalies starts when the event buffer has been initially filled. This involves comparing the current central buffer 
-event frequency to the current buffer median (Muon base level) frequency. The correspondence given via the 
+a Ctrl-C signal or the system is rebooted. The detector activity can be monitored via the command console used to run the 
+software or via browsing a log file written to a specified root directory. During runtime, all events are saved to a memory 
+buffer along with separate frequency information that is calculated using a window that slides across the buffer. The 
+detection of anomalies starts when the event buffer has been initially filled. This involves comparing the current central 
+buffer event frequency to the current buffer median (Muon base level) frequency. The correspondence given via the 
 [UKRAA](https://www.ukraa.com/) provides evidence that the Muon rates can vary between detectors. This could be explained 
 for a number of reasons e.g., how the detectors were constructed, a variation in the components used, detector location, 
 etc. The dynamic base level comparison used by the detection software will help compensate for any drift in the detector 
 sensitivity. When a high (or low) central event frequency is detected the current buffer is saved to a file. Monitoring 
-the central frequency means that we can obtain the sequence of events before and after a detected anomaly. In addition, 
-the software may be configured to save all buffers independent of any occurring anomalies. The software also supplies 
-the option to copy anomaly files to a remote FTP server. 
+the central frequency means that we can obtain the sequence of events before and after a detected anomaly for post 
+analysis. The software may also be configured to save all buffers independent of any occurring anomalies. The option is
+also available to enable the automatic copying of anomaly files to a remote FTP server. 
 
 ## Prerequisites
 
