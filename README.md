@@ -36,21 +36,21 @@ packages are required to be included as part of your Python installation:
 
 Click on the *Code* button found at the top of this main GitHub project page and select *Download Zip*. Unzip
 the download into a chosen directory of your computer. Alternatively, you can copy the project's URL and *git clone* the 
-software directly from the repository.  
+software directly from the repository. This would make it much easier to obtain future updates.  
 
 ### Software configuration
 Before you can run the software you will need to set up a number of parameters in the configuration file.
 When you install the code you will find a template file in the project folder called *config.template.json*. Copy and 
-rename this file to *config.json* in the sme directory. Open the copied file and set the following parameters as 
+rename this file to *config.json* in the same directory. Open the copied file and set the following parameters as 
 required:
 
-* "user name" - designated unique name for logging event data and connecting to remote file server.
+* "user name" - name of user or site used which is used for logging data and connecting to remote file server.
 * "user password" - designated password name for connecting to remote file server. Optional, can be left blank.
 * "user latitude" - float value representing the latitude of the user's detectors in degrees and decimal minutes. 
 * "user longitude" - float value representing the longitude of the user's detectors in degrees and decimal minutes.
-* "event_files root_dir" - string defining an existing directory where your event files will be saved locally. you must create this directory.
-* "event_files save_all" - set to true* (default) if wanting to save all event buffers to files. 
-* "system buff_size" - size of event buffer. Leave set to default."
+* "event_files root_dir" - string defining an existing directory where your event files will be saved locally. You must create this directory.
+* "event_files save_all" - set to *true* (default) if wanting to save all event buffers to files. 
+* "system buff_size" - size of event buffer. Leave set to default.
 * "system window_size" - size of frequency window. Leave set to default.
 * "system anomaly_threshold" - threshold used to trigger an event anomaly. Leave set to default.
 * "system logging_level" - set to "DEBUG" to log all activity or "INFO" to just log a summary.
