@@ -220,3 +220,17 @@ and choose to quit rather than continue with event acquisition.
 EXAMPLE HERE
 
 ## Examining results and plotting
+A very simple plotting utility is supplied that can be used to view the saved event files. This will try to read any 
+files resident under the configured root directory. By default, it will try to consume all the subdirectories. If you 
+wish to plot the files in a single directory then you will need to edit the code as shown in the following example:
+
+```
+# set single folder name here or leave empty for all folders to be accessed under root directory
+single_dir_name = "240424_104334"
+```
+The following plot example shows all the saved buffers at the top with the detected anomaly buffers shown at the 
+bottom. The individual events are represented by the SIPM values (red dots) whilst the shifting window frequency is 
+represented by the silver line plot. The red crosses in the top plot represent the buffer boundaries. 
+
+![](/doc/image_plot.png)
+

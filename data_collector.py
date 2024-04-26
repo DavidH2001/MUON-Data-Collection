@@ -65,7 +65,7 @@ class DataCollector:
                window_size: The number of events used by the anomaly window.
                anomaly_threshold: Optional factor of base frequency used to trigger anomaly. Ignored if set to 0.0.
                     Defaults to 2.0.
-               log_all_events: Set to True to log all events to file(s). Defaults to False.
+               log_all_events: Set to True to log all events to file(s). Defaults to True.
                ignore_header_size: Number of initial data lines to be ignored that represent the header. Defaults to 6.
                start_string: String sent from detector that will initiate event capture. Defaults to "" i.e. not used.
                use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
