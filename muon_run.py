@@ -44,7 +44,7 @@ def serial_ports():
 
 def user_interact_part_one():
     """User interaction part 1."""
-    print(f"Host platform: {sys.platform}")
+    print(f"\nHost platform: {sys.platform}")
     print("Connect the S-detector to a serial port on the host.")
     s_name = ""
     response = input("Select [return] to continue or [Q] to quit: ")
@@ -63,7 +63,7 @@ def user_interact_part_one():
 
 def user_interact_part_two() -> bool:
     """User interaction part 2."""
-    print("Reset the M-detector and then the S-detector.")
+    print("\nReset the M-detector and then the S-detector.")
     print("Confirm that the detector displaying 'S---' is the one connected to the serial port.")
     option = input("Select [return] to continue or [Q] to quit: ")
     if option.upper() != '':
@@ -116,21 +116,35 @@ def _check_config(config):
             raise ValueError("Please set a user name and password when defining a remote IP address.")
 
 
+# def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_address: str) -> None:
+#     """Check FTP connection and initial setup."""
+#     logging.info(f"Checking FTP connection for user folder {user_id}")
+#     logging.info(f"Waiting for response from {ip_address}...")
+#     try:
+#         with FTP(ip_address, user_name, user_password) as ftp:
+#             if user_id in ftp.nlst():
+#                 logging.info("Remote user directory found.")
+#             else:
+#                 logging.info("Welcome!")
+#                 logging.info(f"Creating remote user directory {user_id}.")
+#                 ftp.mkd(user_id)
+#     except TimeoutError:
+#         logging.error("Timeout - unable to connect with remote FTP server")
+
 def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_address: str) -> None:
     """Check FTP connection and initial setup."""
-    logging.info(f"Checking FTP connection for user folder {user_id}")
-    logging.info(f"Waiting for response from {ip_address}...")
+    print(f"Checking FTP connection for user folder {user_id}")
+    print(f"Waiting for response from {ip_address}...")
     try:
         with FTP(ip_address, user_name, user_password) as ftp:
+            print("Welcome!")
             if user_id in ftp.nlst():
-                logging.info("Remote user directory found.")
+                print("Remote user directory found.")
             else:
-                logging.info("Welcome!")
-                logging.info(f"Welcome! Creating remote user directory {user_id}.")
+                print(f"Creating remote user directory {user_id}.")
                 ftp.mkd(user_id)
     except TimeoutError:
-        logging.error("Timeout - unable to connect with remote FTP server")
-
+        print("Timeout - unable to connect with remote FTP server")
 
 def run():
     """Main"""
@@ -161,6 +175,9 @@ def run():
 
     if config['remote']['ip_address'] != "":
         _check_ftp_connect(config['user']['name'], config['user']['password'], user_id, config['remote']['ip_address'])
+        response = input("Select [return] to continue or [Q] to quit: ")
+        if response.upper() == "Q":
+            sys.exit(0)
 
     s_name, port_name = user_interact_part_one()
     print(f"{port_name} selected")

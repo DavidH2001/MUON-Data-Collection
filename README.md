@@ -9,18 +9,16 @@ monitors text lines, sent from the detector, looking for a valid event sequence.
 running the standard Arduino code as described [here](https://github.com/spenceraxani/CosmicWatch-Desktop-Muon-Detector-v2).
 When a valid event line is received the detection sequence will begin and continue to do so until the system detects  
 Ctrl-C (Z) or the system is rebooted. The detector activity may be monitored via the command line used to start it or 
-via browsing the log file written to the specified root directory. 
-
-During runtime, all events are saved to a buffer along with separate frequency information that is calculated using a 
-sliding window. The detection of anomalies starts when the event buffer has been initially filled. This involves comparing 
-the current central buffer frequency to the current buffer median (Muon base level) frequency. The correspondence given 
-via the UKRAA provides evidence that the Muon rates can vary between detectors. This could be explained for a number of 
-reasons e.g., how the detectors were constructed, a variation in the components used, detector location, etc. The dynamic 
-base level comparison used bt the detection software will help compensate for any drift in the detector sensitivity.     
-When a high (or low) central event frequency is detected the current buffer is saved under a subdirectory called 
-"anomaly". Monitoring the central frequency means that we can obtain the sequence of events before and after a detected 
-anomaly. In addition, the software may be configured to save all buffers independent of any occurring anomalies. 
-
+via browsing the log file written to the specified root directory. During runtime, all events are saved to a buffer 
+along with separate frequency information that is calculated using a sliding window. The detection of anomalies starts 
+when the event buffer has been initially filled. This involves comparing the current central buffer frequency to the 
+current buffer median (Muon base level) frequency. The correspondence given via the UKRAA provides evidence that the 
+Muon rates can vary between detectors. This could be explained for a number of reasons e.g., how the detectors were 
+constructed, a variation in the components used, detector location, etc. The dynamic base level comparison used by the 
+detection software will help compensate for any drift in the detector sensitivity. 
+When a high (or low) central event frequency is detected the current buffer is saved to a file. Monitoring the central 
+frequency means that we can obtain the sequence of events before and after a detected anomaly. In addition, the software 
+may be configured to save all buffers independent of any occurring anomalies. 
 The software also supplies the option to copy anomaly files to a remote FTP server. The aim of this is to collect files
 from multiple sites to perform correlative analysis. 
 
@@ -172,9 +170,51 @@ Example log:
 ```
 
 ## Accessing remote FTP server
-If you have configured an IP address then the collector will attempt to connect with the remote file server. If this
-fails to connect then make sure the IP address is set correctly. You will still be able to proceed with start-up as the 
-software will retry to connect later.  
+To enable your anomaly files to be copied to a remote FTP server you will need to update your configuration to include
+a valid *name*, *password* and *ip_address*. It aso important to make sure you have set the *latitude* and *longitude* 
+correctly for your detectors as these will be used to create a personal directory on the FTP server for your files.
+
+```commandline
+{
+    "user": {
+        "name": "Dave",
+        "password": "TheSeverPassword",
+        "latitude": 50.81,
+        "longitude": -1.22
+    },
+    "event_files": {
+        "root_dir": "~/muon_data"
+    },
+    "system": {
+        "buff_size": 210,
+        "window_size": 10,
+        "anomaly_threshold": 4.0,
+        "logging_level": "INFO",
+        "max_median_frequency": 1.0
+    },
+    "remote": {
+        "ip_address": "111.222.333.444"
+    }
+}
+```
+
+Once you have configured the above items the software will attempt to connect with the remote FTP server on start-up. 
+Here the instructions will show some additional information. For example:
+```commandline
+Muon data collection and anomaly detection V0.2.0
+user_id=Dave_50_81_-1_22
+buff_size=210, window_size=10, anomaly_threshold=4.0
+Creating directory C:\Users\dave/muon_data\240426_145706
+Checking FTP connection for user folder Dave_50_81_-1_22
+Waiting for response from 111.222.333.444...
+Welcome!
+Remote user directory found.
+Select [return] to continue or [Q] to quit:
+```
+If this fails to show a successful connection then make sure the IP address is set correctly. You will still be able to 
+proceed as the software will retry to connect later. If you simply want to test your connection then start the software 
+and choose to quit rather than continue with event acquisition.    
+
 
 ### Testing remote access
 EXAMPLE HERE
