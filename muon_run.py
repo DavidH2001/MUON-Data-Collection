@@ -24,14 +24,14 @@ def serial_ports():
     if sys.platform.startswith('win'):
         ports = ['COM%s' % (i + 1) for i in range(256)]
     elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-        # This excludes your current terminal "/dev/tty".
+        # this excludes your current terminal "/dev/tty"
         ports = glob.glob('/dev/tty[A-Za-z]*')
     elif sys.platform.startswith('darwin'):
         ports = glob.glob('/dev/tty.*')
     else:
         raise EnvironmentError('Unsupported platform')
     result = []
-    # Iterate through possible com ports to see if any are available.
+    # iterate through possible com ports to see if any are available
     for port in ports:
         try:
             s = serial.Serial(port)
@@ -92,7 +92,7 @@ def _check_config(config):
         raise ValueError("Please edit config.json to define the required root directory for logging event files.")
     root_dir = os.path.expanduser(config["event_files"]["root_dir"])
     if not os.path.exists(root_dir):
-        raise ValueError(f"The root_dir '{root_dir}' defined in config.json does not exist.")
+        raise ValueError(f"The root_dir '{root_dir}' defined in config.json does not exist. Please create it.")
     if ("user" not in config or "latitude" not in config["user"] or "longitude" not in config["user"] or
             (math.isclose(config["user"]["latitude"], 0.0) and math.isclose(config["user"]["longitude"], 0.0) or not
                 isinstance(config["user"]["latitude"], float) or not isinstance(config["user"]["longitude"], float))):
@@ -140,14 +140,19 @@ def run():
         config = json.load(json_data_file)
     _check_config(config)
 
+    buff_size = config.get("system", None).get("buff_size", 210)
+    window_size = config.get("system", None).get("window_size", 10)
+    anomaly_threshold = config.get("system", None).get("anomaly_threshold", 3.0)
+
     root_dir = os.path.expanduser(config['event_files']['root_dir'])
     user_id = f"{config['user']['name']}_{str(config['user']['latitude'])}_{str(config['user']['longitude'])}"
     user_id = user_id.replace('.', '_')
     print(f"user_id={user_id}")
+    print(f"buff_size={buff_size}, window_size={window_size}, anomaly_threshold={anomaly_threshold}")
 
     # setup logging
     log_level = config.get("system", None).get("logging_level", "INFO")
-    start_time = datetime.now(timezone.utc).strftime("%y%m%d_%H%M%S")
+    start_time = datetime.now().strftime("%y%m%d_%H%M%S")
     root_dir = os.path.join(root_dir, start_time)
     if not os.path.exists(root_dir):
         print(f"Creating directory {root_dir}")
@@ -165,10 +170,6 @@ def run():
     com_port.bytesize = 8
     com_port.parity = 'N'
     com_port.stopbits = 1
-
-    buff_size = config.get("system", None).get("buff_size", 210)
-    window_size = config.get("system", None).get("window_size", 10)
-    anomaly_threshold = config.get("system", None).get("anomaly_threshold", 3.0)
 
     dc = DataCollector(com_port=com_port,
                        save_dir=root_dir,

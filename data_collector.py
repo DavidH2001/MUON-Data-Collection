@@ -381,17 +381,17 @@ class DataCollector:
                     if len(data.split()) < 6:
                         continue
                     logging.info(f"Event line detected - beginning acquisition")
-                    logging.info("Note, only first 3 events will be displayed if logging at INFO level...")
+                    logging.info("Note, only first 10 events will be displayed if logging at INFO level...")
                     self._look_for_start = False
 
             if "###" in data:
                 # assume detector is re-booting
-                logging.info("Detector is re-booting! - resetting for new acquisition...")
+                logging.info("Detector is re-starting - resetting for new acquisition...")
                 self._reset()
                 continue
             data_list = data.split()
             if len(data_list) < 6:
-                logging.info(f"Bad event line {data} detected")
+                logging.info(f"Bad event line detected '{data}'")
                 continue
             data_list = data_list[0:6]
             data_list[0] = int(data_list[0])    # event
@@ -403,7 +403,7 @@ class DataCollector:
             data_list.extend([np.NaN, np.NaN])
             date_time_now = datetime.now(timezone.utc)
             data_list = [date_time_now.strftime(self._date_time_format)[:-3]] + data_list
-            if self._event_counter < 3:
+            if self._event_counter < 10:
                 # always log first few events
                 logging.info(data_list)
             else:
@@ -455,7 +455,6 @@ class DataCollector:
         logging.info("Acquisition thread shutting down...")
         self._acquisition_ended = True
 
-
     def acquire_data(self) -> None:
         t2 = threading.Thread(target=self._acquire_data)
         self._acquisition_ended = False
@@ -471,7 +470,4 @@ class DataCollector:
            blocking on com_port.readline().
         """
         logging.info('Ctrl-C detected - shutting down...')
-        # if self._com_port is not None:
-        #     self._com_port.close()
-        #     logging.info("Com port closed")
         self._shut_down = True
