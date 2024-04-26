@@ -193,7 +193,7 @@ def run():
                        buff_size=buff_size,
                        window_size=window_size,
                        anomaly_threshold=anomaly_threshold,
-                       log_all_events=True,
+                       log_all_events=config['event_files']['save_all'],
                        start_string=s_name,
                        user_id=user_id,
                        user_name=config['user']['name'],

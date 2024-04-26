@@ -6,7 +6,8 @@
         "longitude": 0.0
     },
     "event_files": {
-        "root_dir": "~/muon_data"
+        "root_dir": "~/muon_data",
+        "save_all": true
     },
     "system": {
         "buff_size": 210,
