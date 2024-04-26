@@ -106,7 +106,7 @@ $ python muon_run.py
 Alternatively, you may wish to run the software directly from an IDE editor such as *PyCharm* or *Thonny*.
 
 On start-up you will be presented with some information and a prompt to connect with the S-detector: 
-```
+```commandline
 >python muon_run.py
 Muon data collection and anomaly detection V0.2.0
 user_id=Dave_50_81_-1_22
@@ -132,7 +132,6 @@ Note the process of listing the ports will make the connected detector re-boot:
 ```commandline
 COM4 selected
 Reset the M-detector and then the S-detector.
-Confirm that the detector displaying 'S---' is the one connected to the serial port.
 Select [return] to continue or [Q] to quit:
 ```
 Now reset your detectors so as they are running in coincidence mode. Make sure the detector connected to your computer

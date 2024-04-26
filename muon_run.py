@@ -64,7 +64,6 @@ def user_interact_part_one():
 def user_interact_part_two() -> bool:
     """User interaction part 2."""
     print("\nReset the M-detector and then the S-detector.")
-    print("Confirm that the detector displaying 'S---' is the one connected to the serial port.")
     option = input("Select [return] to continue or [Q] to quit: ")
     if option.upper() != '':
         return False
@@ -116,21 +115,6 @@ def _check_config(config):
             raise ValueError("Please set a user name and password when defining a remote IP address.")
 
 
-# def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_address: str) -> None:
-#     """Check FTP connection and initial setup."""
-#     logging.info(f"Checking FTP connection for user folder {user_id}")
-#     logging.info(f"Waiting for response from {ip_address}...")
-#     try:
-#         with FTP(ip_address, user_name, user_password) as ftp:
-#             if user_id in ftp.nlst():
-#                 logging.info("Remote user directory found.")
-#             else:
-#                 logging.info("Welcome!")
-#                 logging.info(f"Creating remote user directory {user_id}.")
-#                 ftp.mkd(user_id)
-#     except TimeoutError:
-#         logging.error("Timeout - unable to connect with remote FTP server")
-
 def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_address: str) -> None:
     """Check FTP connection and initial setup."""
     print(f"Checking FTP connection for user folder {user_id}")
@@ -145,6 +129,7 @@ def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_addr
                 ftp.mkd(user_id)
     except TimeoutError:
         print("Timeout - unable to connect with remote FTP server")
+
 
 def run():
     """Main"""
@@ -168,16 +153,17 @@ def run():
     log_level = config.get("system", None).get("logging_level", "INFO")
     start_time = datetime.now().strftime("%y%m%d_%H%M%S")
     root_dir = os.path.join(root_dir, start_time)
-    if not os.path.exists(root_dir):
-        print(f"Creating directory {root_dir}")
-        os.makedirs(root_dir)
-    set_logging(root_dir, log_level)
 
     if config['remote']['ip_address'] != "":
         _check_ftp_connect(config['user']['name'], config['user']['password'], user_id, config['remote']['ip_address'])
         response = input("Select [return] to continue or [Q] to quit: ")
         if response.upper() == "Q":
             sys.exit(0)
+
+    if not os.path.exists(root_dir):
+        print(f"\nCreating directory {root_dir}")
+        os.makedirs(root_dir)
+    set_logging(root_dir, log_level)
 
     s_name, port_name = user_interact_part_one()
     print(f"{port_name} selected")
