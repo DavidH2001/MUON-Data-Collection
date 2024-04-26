@@ -8,7 +8,7 @@ from multiple sites to perform correlative analyses.
 The detection software connects to the serial interface of the S-detector after some initial user interaction. It then
 monitors text lines, sent from the detector, looking for a valid event sequence. Note that the S-detector must be 
 running the standard Arduino code as described [here](https://github.com/spenceraxani/CosmicWatch-Desktop-Muon-Detector-v2).
-When a valid event line is received the detection sequence will begin and continue to do so until the system detects  
+When a valid event line is received the detection sequence will begin and continue to do so until the system detects
 a Ctrl-C signal or the system is rebooted. The detector activity can be monitored via the command line used to start it 
 or via browsing a log file written to a specified root directory. During runtime, all events are saved to a buffer 
 along with separate frequency information that is calculated using a sliding window across the buffer. The detection of 
