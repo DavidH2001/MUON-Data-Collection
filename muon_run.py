@@ -13,6 +13,7 @@ from data_collector import DataCollector, VERSION
 """
 MUON data collection project.
 Main runtime.  
+Original development by Dave Hardwick
 """
 
 
@@ -124,6 +125,7 @@ def _check_ftp_connect(user_name: str, user_password: str, user_id: str, ip_addr
             if user_id in ftp.nlst():
                 logging.info("Remote user directory found.")
             else:
+                logging.info("Welcome!")
                 logging.info(f"Welcome! Creating remote user directory {user_id}.")
                 ftp.mkd(user_id)
     except TimeoutError:

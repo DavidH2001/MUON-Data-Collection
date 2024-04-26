@@ -3,6 +3,7 @@
 """
 MUON data collection project.
 DataCollector class definition.
+Original development by Dave Hardwick
 """
 from enum import Enum
 import os.path

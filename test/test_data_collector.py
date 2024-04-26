@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jul 29 14:01:33 2022
-
-@author: dave
+MUON data collection project.
+Unit Testing.
+Original development by Dave Hardwick
 """
 import os
 import unittest
