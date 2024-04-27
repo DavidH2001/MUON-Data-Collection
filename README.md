@@ -12,9 +12,10 @@ When a valid event line is received the detection sequence will begin and contin
 a Ctrl-C signal or the system is rebooted. The detector activity can be monitored via the command console used to run the 
 software or via browsing a log file written to a specified root directory. During runtime, all events are saved to a memory 
 buffer along with separate frequency information that is calculated using a window that slides across the buffer. The 
-detection of anomalies starts when the event buffer has been initially filled. This involves comparing the current central 
-buffer event frequency to the current buffer median (Muon base level) frequency. A configurable thresholding factor defines 
-when an anomaly occurs. The correspondence given via the [UKRAA](https://www.ukraa.com/) provides evidence that the Muon rates can vary 
+detection of anomalies starts when the event buffer has been initially filled which could take up to 20 minutes using
+default settings. Detection involves comparing the current central buffer event frequency to the current buffer median 
+(Muon base level) frequency. A configurable thresholding factor defines when an anomaly occurs. 
+The correspondence given via the [UKRAA](https://www.ukraa.com/) provides evidence that the Muon rates can vary 
 between detectors. This could be explained for a number of reasons e.g., how the detectors were constructed, a variation 
 in the components used, detector location, etc. The dynamic base level comparison used by the detection software will 
 help compensate for any drift in the detector sensitivity. When a high (or low) central event frequency is detected the 
