@@ -1,4 +1,4 @@
-# MUON Project
+# MUON Data Collection Project
 
 The software provided here is for use with the [CosmicWatch](https://github.com/spenceraxani/CosmicWatch-Desktop-Muon-Detector-v2?tab=readme-ov-file) Muon detectors. Its purpose is to collect event data 
 from pairs of Muon detectors running in coincidence (M and S) mode. The ultimate aim is to collect data from multiple 
