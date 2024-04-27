@@ -19,7 +19,7 @@ between detectors. This could be explained for a number of reasons e.g., how the
 in the components used, detector location, etc. The dynamic base level comparison used by the detection software will 
 help compensate for any drift in the detector sensitivity. When a high (or low) central event frequency is detected the 
 current buffer is saved to a file. Monitoring the central frequency means that we can obtain the sequence of events 
-before and after a detected anomaly for post analysis. The software may also be configured to save all buffers independent 
+before and after a detected anomaly for post analysis. The software may be configured to save all buffers independent 
 of any occurring anomalies. The option is also available to enable the automatic copying of anomaly files to a remote 
 FTP server. 
 
@@ -32,7 +32,6 @@ packages are required to be included as part of your Python installation:
 [matplotliob](https://pypi.org/project/matplotlib/) - only required if wanting to use plot utility.<br/>
 [pandas](https://pypi.org/project/pandas/)<br/>
 [pyserial](https://pypi.org/project/pyserial/0)<br/>
-[signal](https://docs.python.org/3/library/signal.html)
 
 ## Installation
 
@@ -41,7 +40,7 @@ the download into a chosen directory of your computer. Alternatively, you can co
 software directly from the repository. This would make it much easier to obtain future updates.  
 
 ### Software configuration
-Before you can run the software you will need to set up a number of parameters in the configuration file.
+Before you can run the software you will need to set up a number of parameters in a configuration file.
 When you install the code you will find a template file in the project folder called *config.template.json*. Copy and 
 rename this file to *config.json* in the same directory. Open the copied file and set the following parameters as 
 required:
@@ -137,19 +136,19 @@ Select [return] to continue or [Q] to quit:
 ```
 Now reset your detectors so as they are running in coincidence mode. Make sure the detector connected to your computer
 shows itself as the S-detector and the other as the M-detector. When ready press *return* to continue. Try to do this
-as soon as S-detector runs to avoid spurious events. Your system should now be up and running.
+as soon as S-detector is reset to avoid spurious events. Your system should now be up and running.
 
 ### Directories and Logging
-Each time the software starts it will create a new session directory, based on the local data and time, under the root 
+Each time the software starts it will create a new session directory, based on the local date and time, under the root 
 directory defined in the configuration. All event files as well as an activity log relating to the session will be 
 written here. Event anomaly buffers will be saved automatically to a subdirectory called *anomaly*. And, likewise, if 
 you have configured to save all event buffers then these will be saved in subdirectory called *all*.  
 
 A log of activity is maintained each time the software is run. The log is streamed live through the launching console as 
 well as saved to a file called *muon_log.txt* which is created automatically in the current session directory. Viewing
-this log is the best way to determine if your setup is working correctly. Events should normally be received at a rate 
+the log is the best way to determine if your setup is working correctly. Events should normally be received at a rate 
 well below 1Hz otherwise you may not be running in coincidence mode or something cosmologically very strange is 
-occurring! But it probably will be the former. 
+occurring! It probably will be the former. 
 
 If your configuration logging level is set to *DEBUG* then you will be able to log all events as well as other 
 information.  
@@ -220,9 +219,9 @@ and choose to quit rather than continue with event acquisition.
 
 ## Examining results and plotting
 A very simple plotting utility is supplied that can be used to view the saved event files. This will attempt to read any 
-files resident under the configured root directory. By default, it will try to consume all the subdirectories. If you 
-wish to plot the files in a single directory then you will need to edit the code at the location shown in the following 
-example:
+files resident under the local configured root directory. By default, it will try to consume all the subdirectories. 
+If you wish to plot the files in a single directory then you will need to edit *muon_plot.py* at the location shown 
+in the following example:
 
 ```
 # set single folder name here or leave empty for all folders to be accessed under root directory
