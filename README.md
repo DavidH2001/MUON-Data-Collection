@@ -13,14 +13,15 @@ a Ctrl-C signal or the system is rebooted. The detector activity can be monitore
 software or via browsing a log file written to a specified root directory. During runtime, all events are saved to a memory 
 buffer along with separate frequency information that is calculated using a window that slides across the buffer. The 
 detection of anomalies starts when the event buffer has been initially filled. This involves comparing the current central 
-buffer event frequency to the current buffer median (Muon base level) frequency. The correspondence given via the 
-[UKRAA](https://www.ukraa.com/) provides evidence that the Muon rates can vary between detectors. This could be explained 
-for a number of reasons e.g., how the detectors were constructed, a variation in the components used, detector location, 
-etc. The dynamic base level comparison used by the detection software will help compensate for any drift in the detector 
-sensitivity. When a high (or low) central event frequency is detected the current buffer is saved to a file. Monitoring 
-the central frequency means that we can obtain the sequence of events before and after a detected anomaly for post 
-analysis. The software may also be configured to save all buffers independent of any occurring anomalies. The option is
-also available to enable the automatic copying of anomaly files to a remote FTP server. 
+buffer event frequency to the current buffer median (Muon base level) frequency. A configurable thresholding factor defines 
+when an anomaly occurs. The correspondence given via the [UKRAA](https://www.ukraa.com/) provides evidence that the Muon rates can vary 
+between detectors. This could be explained for a number of reasons e.g., how the detectors were constructed, a variation 
+in the components used, detector location, etc. The dynamic base level comparison used by the detection software will 
+help compensate for any drift in the detector sensitivity. When a high (or low) central event frequency is detected the 
+current buffer is saved to a file. Monitoring the central frequency means that we can obtain the sequence of events 
+before and after a detected anomaly for post analysis. The software may also be configured to save all buffers independent 
+of any occurring anomalies. The option is also available to enable the automatic copying of anomaly files to a remote 
+FTP server. 
 
 ## Prerequisites
 
@@ -28,6 +29,7 @@ This software has been tested with Python 3.8 and 3.9. Other 3.x version may als
 packages are required to be included as part of your Python installation:
 
 [ftplib](https://docs.python.org/3/library/ftplib.html#module-ftplib)<br/>
+[matplotliob](https://pypi.org/project/matplotlib/) - only required if wanting to use plot utility.<br/>
 [pandas](https://pypi.org/project/pandas/)<br/>
 [pyserial](https://pypi.org/project/pyserial/0)<br/>
 [signal](https://docs.python.org/3/library/signal.html)
@@ -50,11 +52,11 @@ required:
 * "user longitude" - float value representing the longitude of the user's detectors in degrees and decimal minutes.
 * "event_files root_dir" - string defining an existing directory where your event files will be saved locally. You must create this directory.
 * "event_files save_all" - set to *true* (default) if wanting to save all event buffers to files. 
-* "system buff_size" - size of event buffer. Leave set to default.
-* "system window_size" - size of frequency window. Leave set to default.
-* "system anomaly_threshold" - threshold used to trigger an event anomaly. Leave set to default.
+* "system buff_size" - size of event buffer. Can leave set to the default.
+* "system window_size" - size of frequency window. Can leave set to the default.
+* "system anomaly_threshold" - threshold used to trigger an event anomaly. Can leave set to the default. 
 * "system logging_level" - set to "DEBUG" to log all activity or "INFO" to just log a summary.
-* "system max_median_frequency" - set to maximum median frequency allowed. Leave set to default.   
+* "system max_median_frequency" - set to maximum median frequency allowed. Leave this set to the default.   
 * "remote ip_address" - IP address of remote file server. If this is left as an empty string then remote access will not be attempted.
 
 Example config.json file:

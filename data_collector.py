@@ -30,26 +30,13 @@ class Status(Enum):
 
 class DataCollector:
     """Data collector object class.
-    UPDATE THIS !!!
     This class is used to consume event data from a serial comm port and process it by looking for acquisition frequency
-    (high/low) anomalies. When an anomaly is detected the event data buffer is saved to a file.
-
-    The maximum events that can be held by the collector is defined by buffer size. The buffer is split into a
-    number of sub buffers (windows) that are used to define the current event frequency i.e. time span of window
-    divided by the number of events it holds. A frequency array is used to log the corresponding window frequencies for
-    the whole buffer.
-
-    When the buff is full the logged frequencies are used to determine a baseline (median) frequency for the whole
-    buffer. The buffer is then refilled starting from the beginning (oldest) entry again. The window frequency array is
-    also updated as each new window of events is received. The median frequency is updated when the buffer is
-    re-filled which allows for any drift in the detector system.
-
-    Anomaly detection starts after the buffer has been initially filled with events using its central window. This
-    enables events preceding and following an anomaly to be logged. Detection of an anomaly is achieved by comparing
-    the window frequency against the current baseline frequency.
-
-    The Saved buffer CSV files are not ordered chronologically. When loading a CSV file (into a pandas data frame for
-    example) you will need to reorder the rows e.g., using event number."""
+    (high/low) anomalies. When an anomaly is detected the event data buffer is saved to a file. Anomaly detection starts
+    after the buffer has been initially filled with events using its central window. This enables events preceding and
+    following an anomaly to be logged. Detection of an anomaly is achieved by comparing a shifting window frequency
+    against the current baseline frequency.
+    Note, the Saved buffer CSV files are not ordered chronologically. When loading a CSV file (into a pandas data frame
+    for example) you will need to reorder the rows e.g., using event number."""
     def __init__(self,
                  com_port: str,
                  **kwargs):
@@ -435,9 +422,6 @@ class DataCollector:
             # anomaly check
             if self._anomaly_threshold != 0.0 and self._frequency_array_full:
                 if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
-                    # mark anomaly by changing sign of event number
-                    # self._buff.at[self._mid_frequency_index, 'event'] = \
-                    #     (-1 * self._buff.at[self._mid_frequency_index, 'event'])
                     if self._save_dir and self._ignore_event_count == 0:
                         self._ignore_event_count = 1 * self._window_size
                         self._save_buff("anomaly")
