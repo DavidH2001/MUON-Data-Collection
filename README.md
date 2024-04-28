@@ -11,7 +11,8 @@ sites to perform correlative analyses.
 4. [Software Configuration](#software-configuration)
 5. [Hardware Configuration](#hardware-configuration)
 6. [Running the software](#running-the-software)
-   1. [Directories and Logging](#directories-and-logging)
+   1. [Software Version and Updates](#software-version-and-updates)
+   2. [Directories and Logging](#directories-and-logging)
 7. [Accessing remote FTP server](#accessing-remote-ftp-server)
 8. [Examining results and plotting](#examining-results-and-plotting)
 
@@ -149,6 +150,11 @@ Select [return] to continue or [Q] to quit:
 Now reset your detectors so as they are running in coincidence mode. Make sure the detector connected to your computer
 shows itself as the S-detector and the other as the M-detector. When ready press *return* to continue. Try to do this
 as soon as S-detector is reset to avoid spurious events. Your system should now be up and running.
+
+### Software Version and Updates
+The version of the software you are running will be shown at start-up. You can keep track of any latest changes to the 
+GitHub repository by looking at the [commit](https://github.com/DavidH2001/MUON-Data-Collection/commits/main/) 
+page. If your software is out of date then download or pull the latest changes accordingly.     
 
 ### Directories and Logging
 Each time the software starts it will create a new session directory, based on the local date and time, under the root 
