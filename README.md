@@ -4,6 +4,17 @@ The software provided here is for use with the [CosmicWatch](https://github.com/
 from pairs of Muon detectors running in coincidence (M and S) mode. The ultimate aim is to collect data from multiple 
 sites to perform correlative analyses. 
 
+## Table of Contents
+1. [Software Description](#software-description)
+2. [Prerequisites](#prerequisites)
+3. [Installation](#installation)
+4. [Software Configuration](#software-configuration)
+5. [Hardware Configuration](#hardware-configuration)
+6. [Running the software](#running-the-software)
+   1. [Directories and Logging](#directories-and-logging)
+7. [Accessing remote FTP server](#accessing-remote-ftp-server)
+8. [Examining results and plotting](#examining-results-and-plotting)
+
 ## Software Description
 The detection software connects to the serial interface of the S-detector after some initial user interaction. It then
 monitors text lines, sent from the detector, looking for a valid event sequence. Note that the S-detector must be 
@@ -40,7 +51,7 @@ Click on the *Code* button found at the top of this main GitHub project page and
 the download into a chosen directory of your computer. Alternatively, you can copy the project's URL and *git clone* the 
 software directly from the repository. This would make it much easier to obtain future updates.  
 
-### Software configuration
+## Software Configuration
 Before you can run the software you will need to set up a number of parameters in a configuration file.
 When you install the code you will find a template file in the project folder called *config.template.json*. Copy and 
 rename this file to *config.json* in the same directory. Open the copied file and set the following parameters as 
@@ -86,7 +97,7 @@ Example config.json file:
 }
 ```
 
-## Hardware configuration
+## Hardware Configuration
 Set up two detectors to run in coincidence mode making sure the intended S-detector is connected to the computer via a 
 USB/serial cable. The image below shows M (top) and S (bottom) detectors running in coincidence mode. The S-detector is 
 connected to a Raspberry Pi which is running the detection software. 
