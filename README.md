@@ -230,7 +230,8 @@ single_dir_name = "240424_104334"
 ```
 The following plot example shows all the saved buffers at the top with the detected anomaly buffers shown at the 
 bottom. The individual events are represented by the SIPM values (red dots) whilst the shifting window frequency is 
-represented by the silver line plot. The red crosses in the top plot represent the buffer boundaries. 
+represented by the silver line plot. The gray crosses in the top plot represent the median frequency of the buffer lying
+to the left. 
 
 ![](/doc/image_plot.png)
 

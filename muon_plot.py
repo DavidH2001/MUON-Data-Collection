@@ -2,7 +2,7 @@ import os.path
 import pandas as pd
 import json
 from os import listdir
-from os.path import join
+from data_collector import VERSION
 import matplotlib.pyplot as plt
 
 """
@@ -84,6 +84,8 @@ def get_data_dirs(dir_list: str, sub_folder: str = None) -> (pd.DataFrame, pd.Da
     return win_f_df, median_f_df, sipm_df
 
 
+print(f"Muon data collection and anomaly detection V{VERSION}")
+
 with open("config.json") as json_data_file:
     config = json.load(json_data_file)
 
@@ -107,7 +109,7 @@ ax1.set_ylabel('Window Freq (Hz)')
 ax1_2.set_ylabel('SIPM (mV)')
 win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "all")
 ax1.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
-ax1.plot(win_f_df['time'].values, win_f_df['median_f'].values, 'r+')
+ax1.plot(win_f_df['time'].values, win_f_df['median_f'].values, '+', color='gray')
 ax1_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)
 ax1.grid()
 ax1.set_title("All Buffers", fontsize=10)
