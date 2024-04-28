@@ -44,7 +44,7 @@ packages are required to be included as part of your Python installation:
 [ftplib](https://docs.python.org/3/library/ftplib.html#module-ftplib)<br/>
 [matplotliob](https://pypi.org/project/matplotlib/) - only required if wanting to use plot utility.<br/>
 [pandas](https://pypi.org/project/pandas/)<br/>
-[pyserial](https://pypi.org/project/pyserial/0)<br/>
+[pyserial](https://pythonhosted.org/pyserial/)<br/>
 
 ## Installation
 
