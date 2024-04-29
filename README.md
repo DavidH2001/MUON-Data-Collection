@@ -170,7 +170,10 @@ well below 1Hz otherwise you may not be running in coincidence mode or something
 occurring! It probably will be the former. 
 
 If your configuration logging level is set to *DEBUG* then you will be able to log all events as well as other 
-information.  
+information. 
+
+An example of an actual captured data directory that includes *muon_log.txt*, *all* and *anomaly* directories with 
+associated files is provided under project *data*. 
 
 Example log:
 ```commandline
