@@ -17,6 +17,7 @@ import logging
 from data_collector import DataCollector, Status
 from muon_run import _check_config
 from unittest.mock import Mock
+import muon_plot
 
 
 def set_logging():
@@ -409,6 +410,27 @@ class DataCollectorTest(unittest.TestCase):
                 median_f_array = df[df['median_f'].notna()]['median_f'].values
                 self.assertEqual(median_f_array.size, 1)
                 self.assertAlmostEqual(np.median(win_f_array), median_f_array[0])
+                # load the all files in the order that they were saved and check event column is contiguous
+                directory = os.path.join(temp_dir, "all")
+                file_list = [file for file in os.listdir(directory) if file.endswith('csv')]
+                self.assertEqual(len(file_list), 4)
+                # note index 3 is the anomaly file
+                for i in [0, 1, 2, 4]:
+                    file = data_collector.saved_file_names[i]
+                    df = pd.read_csv(file, skiprows=1)
+                    if i == 0:
+                        df_all = pd.read_csv(file, skiprows=1)
+                    else:
+                        df_all = pd.concat([df_all, df], ignore_index=True)
+                self.assertListEqual(df_all['event'].tolist(), list(range(1, 121)))
+                file = data_collector.saved_file_names[3]
+                df_anomaly = pd.read_csv(file, skiprows=1)
+                # note buffer would have wrapped round so events will not be in order
+                df_anomaly.insert(0, 'time', pd.to_datetime(df_anomaly['comp_time'], format=muon_plot.date_time_format))
+                self.assertFalse(df_anomaly['event'].tolist() == list(range(90, 120)))
+                # sort them by date/time
+                df_anomaly = df_anomaly.sort_values(by='time', ignore_index=True)
+                self.assertListEqual(df_anomaly['event'].tolist(), list(range(90, 120)))
 
     def test_data_collector_no_save_events(self):
         """Test that no files are saved if not setting save_dir."""

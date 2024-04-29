@@ -86,52 +86,59 @@ def get_data_dirs(dir_list: str, sub_folder: str = None) -> (pd.DataFrame, pd.Da
     return win_f_df, median_f_df, sipm_df
 
 
-print(f"Muon data collection and anomaly detection V{VERSION}")
+def main():
 
-with open("config.json") as json_data_file:
-    config = json.load(json_data_file)
+    print(f"Muon data collection and anomaly detection V{VERSION}")
 
-# select folder(s) to be accessed for event data
-root_dir = os.path.expanduser(config['event_files']['root_dir'])
-# set single folder name here or leave empty for all folders to be accessed under root directory
-single_dir_name = ""
-directory_list = [os.path.join(root_dir, single_dir_name)]
-# all folders
-if not single_dir_name:
-    directory_list = [os.path.join(root_dir, name) for name in os.listdir(root_dir) if
-                      os.path.isdir(os.path.join(root_dir, name))]
+    with open("config.json") as json_data_file:
+        config = json.load(json_data_file)
 
-# set up for plotting
-fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
+    # select folder(s) to be accessed for event data
+    root_dir = os.path.expanduser(config['event_files']['root_dir'])
+    # set single folder name here or leave empty for all folders to be accessed under root directory
+    single_dir_name = ""
+    directory_list = [os.path.join(root_dir, single_dir_name)]
+    # all folders
+    if not single_dir_name:
+        directory_list = [os.path.join(root_dir, name) for name in os.listdir(root_dir) if
+                          os.path.isdir(os.path.join(root_dir, name))]
 
-# all event plotting
-ax1_2 = ax1.twinx()
-ax1.set_xlabel('Date/Time (UTC)')
-ax1.set_ylabel('Window Freq (Hz)')
-ax1_2.set_ylabel('SIPM (mV)')
-win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "all")
-ax1.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
-ax1.plot(win_f_df['time'].values, win_f_df['median_f'].values, '+', color='gray')
-ax1_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)
-ax1.grid()
-ax1.set_title("All Buffers", fontsize=10)
+    # set up for plotting
+    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
 
-# anomaly plotting
-ax2_2 = ax2.twinx()
-ax2_2.set_ylabel('SIPM (mV)')
+    # all event plotting
+    ax1_2 = ax1.twinx()
+    ax1.set_xlabel('Date/Time (UTC)')
+    ax1.set_ylabel('Window Freq (Hz)')
+    ax1_2.set_ylabel('SIPM (mV)')
+    win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "all")
+    ax1.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
+    ax1.plot(win_f_df['time'].values, win_f_df['median_f'].values, '+', color='gray')
+    ax1_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)
+    ax1.grid()
+    ax1.set_title("All Buffers", fontsize=10)
 
-# anomaly event plotting
-ax2.set_xlabel('Date/Time (UTC)')
-ax2.set_ylabel('Window Freq (Hz)')
-win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "anomaly")
-if win_f_df is not None:
-    ax2.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
-    ax2_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)
+    # anomaly plotting
+    ax2_2 = ax2.twinx()
+    ax2_2.set_ylabel('SIPM (mV)')
+
+    # anomaly event plotting
+    ax2.set_xlabel('Date/Time (UTC)')
+    ax2.set_ylabel('Window Freq (Hz)')
+    win_f_df, median_f_d, sipm = get_data_dirs(directory_list, "anomaly")
+    if win_f_df is not None:
+        ax2.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
+        ax2_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)
     ax2.grid()
     ax2.set_title("Anomaly Buffers", fontsize=10)
 
-plt.tight_layout()
-plt.gcf().autofmt_xdate()
-plt.show()
+    plt.tight_layout()
+    plt.gcf().autofmt_xdate()
+    plt.show()
+
+
+if __name__ == "__main__":
+    main()
+
 
 

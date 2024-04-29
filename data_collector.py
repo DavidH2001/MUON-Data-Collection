@@ -20,7 +20,7 @@ from ftplib import FTP
 from datetime import datetime, timezone
 
 DATE_TIME_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
-VERSION: str = "0.2.3"
+VERSION: str = "0.2.4"
 
 
 class Status(Enum):
@@ -267,6 +267,9 @@ class DataCollector:
         window_data = self._buff.iloc[self._window_buff_indices]
         window_data.loc[window_data.index[:], 'comp_time'] = (
             pd.to_datetime(window_data.loc[window_data.index[:], 'comp_time'], format=self._date_time_format))
+        # TODO possible fix if SettingWithCopyWarning persists:
+        # x = window_data.loc[window_data.index[:], 'comp_time'].copy()
+        # window_data.loc[window_data.index[:], 'comp_time'] = pd.to_datetime(x, format=self._date_time_format)
         window_data = window_data.sort_values(by='comp_time', ignore_index=True)
         windows_time_diff = (window_data.loc[window_data.index[-1], 'comp_time'] -
                              window_data.loc[window_data.index[0], 'comp_time'])
