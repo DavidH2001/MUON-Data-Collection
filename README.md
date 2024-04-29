@@ -15,7 +15,7 @@ sites to perform correlative analyses.
    2. [Directories and Logging](#directories-and-logging)
 7. [Accessing remote FTP server](#accessing-remote-ftp-server)
 8. [Examining results and plotting](#examining-results-and-plotting)
-   1. [Plotting provided data example](#plotting-provided-data-example)
+   1. [Plotting the provided data example](#plotting-the-provided-data-example)
 
 ## Software Description
 The detection software connects to the serial interface of the S-detector after some initial user interaction. It then
@@ -176,6 +176,7 @@ An example of an actual captured data directory that includes *muon_log.txt*, *a
 associated files is provided under project *data*. 
 
 Example log:
+
 ```commandline
 2024-04-24:11:43:44, INFO, Running detection software V0.2.0 using DEBUG logging level
 2024-04-24:11:43:44, INFO, buff_size=210, window_size=10, anomaly_threshold=2.5
