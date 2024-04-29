@@ -93,8 +93,10 @@ def main():
     with open("config.json") as json_data_file:
         config = json.load(json_data_file)
 
-    # select folder(s) to be accessed for event data
+    # Select folder(s) to be accessed for event data. The root folder defined by the configuration is used by default:
     root_dir = os.path.expanduser(config['event_files']['root_dir'])
+    # Alternatively, you can point to the project example data directory as shown here:
+    # root_dir = "data"
     # set single folder name here or leave empty for all folders to be accessed under root directory
     single_dir_name = ""
     directory_list = [os.path.join(root_dir, single_dir_name)]

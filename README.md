@@ -15,6 +15,7 @@ sites to perform correlative analyses.
    2. [Directories and Logging](#directories-and-logging)
 7. [Accessing remote FTP server](#accessing-remote-ftp-server)
 8. [Examining results and plotting](#examining-results-and-plotting)
+   1. [Plotting provided data example](#plotting-provided-data-example)
 
 ## Software Description
 The detection software connects to the serial interface of the S-detector after some initial user interaction. It then
@@ -238,11 +239,15 @@ and choose to quit rather than continue with event acquisition.
 ## Examining results and plotting
 A very simple plotting utility is supplied that can be used to view the saved event files. This will attempt to read any 
 files resident under the local configured root directory. By default, it will try to consume all the subdirectories. 
-If you wish to plot the files in a single directory then you will need to edit *muon_plot.py* at the location shown 
-in the following example:
+If you wish to plot the files in a single directory (e.g. 240424_104334) then you will need to edit *muon_plot.py* at 
+the location shown in the following example:
 
-```
-# set single folder name here or leave empty for all folders to be accessed under root directory
+```python
+ # Select folder(s) to be accessed for event data. The root folder defined by the configuration is used by default:
+ root_dir = os.path.expanduser(config['event_files']['root_dir'])
+ # Alternatively, you can point to the project example data directory as shown here:
+ # root_dir = "data"
+ # set single folder name here or leave empty for all folders to be accessed under root directory
 single_dir_name = "240424_104334"
 ```
 The following plot example shows all the saved buffers at the top with the detected anomaly buffers shown at the 
@@ -252,3 +257,24 @@ to the left.
 
 ![](/doc/image_plot.png)
 
+### Plotting the provided data example
+Included with the project (under *data*) is an example of a copy of an actual captured data directory. You can plot this 
+by changing *muon_plot.py* as shown here:
+
+```python
+ # Select folder(s) to be accessed for event data. The root folder defined by the configuration is used by default:
+ # root_dir = os.path.expanduser(config['event_files']['root_dir'])
+ # Alternatively, you can point to the project example data directory as shown here:
+ root_dir = "data"
+ # set single folder name here or leave empty for all folders to be accessed under root directory
+ single_dir_name = ""
+```
+Running *muon_plot.py* should now give the following output:
+
+![](/doc/image_plot_1.png)
+
+This data was captured using the configuration set to: buff_size=210, window_size=10, anomaly_threshold=5.0. See the 
+included *muon_log.txt* file for more information. This run detected a single anomaly and if we zoom in we can see it in more
+detail:
+
+![](/doc/image_plot_1_zoom.png)
