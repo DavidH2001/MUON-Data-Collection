@@ -20,7 +20,7 @@ from ftplib import FTP
 from datetime import datetime, timezone
 
 DATE_TIME_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
-VERSION: str = "0.2.4"
+VERSION: str = "0.2.5"
 
 
 class Status(Enum):
