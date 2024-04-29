@@ -162,3 +162,4 @@ cython_debug/
 # My stuff
 config.json
 *.txt
+!data/muon_log.txt

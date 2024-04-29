@@ -1,0 +1,91 @@
+2024-04-28:19:00:37, INFO, Running detection software V0.2.3 using INFO logging level
+2024-04-28:19:00:37, INFO, buff_size=210, window_size=10, anomaly_threshold=5.0
+2024-04-28:19:00:37, INFO, user_id=Dave_50_8_-1_2, latitude=50.8, longitude=-1.2
+2024-04-28:19:00:37, INFO, Acquisition thread started
+2024-04-28:19:00:37, INFO, Remote access thread started
+2024-04-28:19:00:37, INFO, Waiting for S-detector initial event line...
+2024-04-28:19:01:16, INFO, Event line detected - beginning acquisition
+2024-04-28:19:01:16, INFO, Note, only first 10 events will be displayed if logging at INFO level...
+2024-04-28:19:01:16, INFO, ['20240428 180116.545', 1, 37991, 396, 85.28, 7178, 22.19, nan, nan]
+2024-04-28:19:01:24, INFO, ['20240428 180124.630', 2, 46269, 204, 34.73, 8840, 22.19, nan, nan]
+2024-04-28:19:01:25, INFO, ['20240428 180125.330', 3, 46968, 415, 95.0, 8844, 22.19, nan, nan]
+2024-04-28:19:01:46, INFO, ['20240428 180146.453', 4, 68636, 339, 62.98, 12908, 22.19, nan, nan]
+2024-04-28:19:01:52, INFO, ['20240428 180152.041', 5, 74224, 385, 80.11, 14014, 22.19, nan, nan]
+2024-04-28:19:01:53, INFO, ['20240428 180153.110', 6, 75293, 384, 80.08, 14202, 22.19, nan, nan]
+2024-04-28:19:01:57, INFO, ['20240428 180157.491', 7, 79676, 240, 41.21, 14944, 22.19, nan, nan]
+2024-04-28:19:02:02, INFO, ['20240428 180202.380', 8, 84567, 454, 115.28, 15865, 22.19, nan, nan]
+2024-04-28:19:02:03, INFO, ['20240428 180203.075', 9, 85260, 255, 43.96, 16055, 22.19, nan, nan]
+2024-04-28:19:02:20, INFO, ['20240428 180220.317', 10, 101963, 444, 109.09, 18989, 22.19, nan, nan]
+2024-04-28:19:23:47, INFO, buffer median frequency: 0.174
+2024-04-28:19:23:47, INFO, Creating directory /home/dave/muon_data/240428_190024/all
+2024-04-28:19:23:47, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-182347.csv
+2024-04-28:19:50:42, INFO, buffer median frequency: 0.149
+2024-04-28:19:50:42, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-185042.csv
+2024-04-28:20:17:39, INFO, buffer median frequency: 0.163
+2024-04-28:20:17:39, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-191739.csv
+2024-04-28:20:46:55, INFO, buffer median frequency: 0.134
+2024-04-28:20:46:55, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-194655.csv
+2024-04-28:21:11:08, INFO, buffer median frequency: 0.166
+2024-04-28:21:11:08, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-201108.csv
+2024-04-28:21:35:30, INFO, buffer median frequency: 0.183
+2024-04-28:21:35:30, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-203530.csv
+2024-04-28:22:02:08, INFO, buffer median frequency: 0.147
+2024-04-28:22:02:08, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-210208.csv
+2024-04-28:22:25:51, INFO, buffer median frequency: 0.181
+2024-04-28:22:25:51, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-212551.csv
+2024-04-28:22:52:03, INFO, buffer median frequency: 0.156
+2024-04-28:22:52:03, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-215203.csv
+2024-04-28:23:14:15, INFO, buffer median frequency: 0.185
+2024-04-28:23:14:15, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-221415.csv
+2024-04-28:23:40:13, INFO, buffer median frequency: 0.161
+2024-04-28:23:40:13, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-224013.csv
+2024-04-29:00:06:02, INFO, buffer median frequency: 0.169
+2024-04-29:00:06:02, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-230601.csv
+2024-04-29:00:30:38, INFO, buffer median frequency: 0.164
+2024-04-29:00:30:38, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240428-233038.csv
+2024-04-29:01:01:31, INFO, buffer median frequency: 0.128
+2024-04-29:01:01:31, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-000130.csv
+2024-04-29:01:26:00, INFO, buffer median frequency: 0.164
+2024-04-29:01:26:00, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-002600.csv
+2024-04-29:01:56:06, INFO, buffer median frequency: 0.132
+2024-04-29:01:56:06, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-005606.csv
+2024-04-29:02:20:07, INFO, buffer median frequency: 0.166
+2024-04-29:02:20:07, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-012007.csv
+2024-04-29:02:45:00, INFO, buffer median frequency: 0.159
+2024-04-29:02:45:00, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-014500.csv
+2024-04-29:03:06:43, INFO, buffer median frequency: 0.190
+2024-04-29:03:06:43, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-020643.csv
+2024-04-29:03:34:26, INFO, buffer median frequency: 0.146
+2024-04-29:03:34:27, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-023426.csv
+2024-04-29:04:00:41, INFO, buffer median frequency: 0.157
+2024-04-29:04:00:41, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-030041.csv
+2024-04-29:04:28:09, INFO, buffer median frequency: 0.151
+2024-04-29:04:28:10, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-032809.csv
+2024-04-29:04:52:56, INFO, buffer median frequency: 0.173
+2024-04-29:04:52:56, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-035256.csv
+2024-04-29:05:21:01, INFO, buffer median frequency: 0.142
+2024-04-29:05:21:01, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-042101.csv
+2024-04-29:05:47:12, INFO, buffer median frequency: 0.157
+2024-04-29:05:47:12, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-044712.csv
+2024-04-29:06:02:49, INFO, HIGH ANOMALY DETECTED at frequency 0.832
+2024-04-29:06:02:49, INFO, Creating directory /home/dave/muon_data/240428_190024/anomaly
+2024-04-29:06:02:49, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/anomaly/20240429-050248.csv
+2024-04-29:06:03:06, INFO, Saving 20240429-050248.csv to remote server
+2024-04-29:06:11:10, INFO, buffer median frequency: 0.169
+2024-04-29:06:11:10, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-051110.csv
+2024-04-29:06:38:04, INFO, buffer median frequency: 0.149
+2024-04-29:06:38:04, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-053804.csv
+2024-04-29:07:08:39, INFO, buffer median frequency: 0.140
+2024-04-29:07:08:39, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-060839.csv
+2024-04-29:07:34:09, INFO, buffer median frequency: 0.154
+2024-04-29:07:34:09, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-063409.csv
+2024-04-29:08:02:52, INFO, buffer median frequency: 0.146
+2024-04-29:08:02:52, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-070252.csv
+2024-04-29:08:30:43, INFO, buffer median frequency: 0.142
+2024-04-29:08:30:43, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-073043.csv
+2024-04-29:08:53:45, INFO, buffer median frequency: 0.172
+2024-04-29:08:53:45, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-075345.csv
+2024-04-29:09:21:35, INFO, buffer median frequency: 0.144
+2024-04-29:09:21:35, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-082135.csv
+2024-04-29:09:46:33, INFO, buffer median frequency: 0.161
+2024-04-29:09:46:33, INFO, Saving buffer to file /home/dave/muon_data/240428_190024/all/20240429-084633.csv
