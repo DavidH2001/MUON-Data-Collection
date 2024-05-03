@@ -7,6 +7,7 @@ Original development by Dave Hardwick
 """
 import os
 import unittest
+from datetime import datetime, timedelta
 from time import sleep
 import tempfile
 import json
@@ -104,12 +105,13 @@ class DataCollectorTest(unittest.TestCase):
         self.assertIn("password", config["user"])
         self.assertIn("latitude", config["user"])
         self.assertIn("longitude", config["user"])
+        self.assertIn("height_above_sea_level", config["user"])
         self.assertIn("ip_address", config["remote"])
 
         config['event_files']['root_dir'] = ""
         with self.assertRaises(ValueError) as context:
             _check_config(config)
-        self.assertIn(f"Please edit config.json to define the required root directory for logging event files.",
+        self.assertIn("Please edit config.json to define the required root directory for logging event files.",
                       str(context.exception))
 
         config['event_files']['root_dir'] = "a:/b/c"
@@ -140,6 +142,12 @@ class DataCollectorTest(unittest.TestCase):
         self.assertIn("Please set a user name and password when defining a remote IP address.",
                       str(context.exception))
 
+        config["user"]["height_above_sea_level"] = "10"
+        with self.assertRaises(ValueError) as context:
+            _check_config(config)
+        self.assertIn("The user height_above_sea_level is missing or defined with incorrect type.",
+                      str(context.exception))
+        config["user"]["height_above_sea_level"] = 10
         config["user"]["name"] = 10.0
         config["user"]["password"] = 10.0
 
@@ -392,9 +400,8 @@ class DataCollectorTest(unittest.TestCase):
                     sleep(0.01)
                 self.assertTrue(os.path.isdir(os.path.join(temp_dir, "anomaly")))
                 self.assertTrue(os.path.isdir(os.path.join(temp_dir, "all")))
-                # We should have 4 log all buffers + 1 low anomaly buffer. High anomaly is spread out over larger
-                # window size and is thus not seen.
-                self.assertEqual(len(data_collector.saved_file_names), 5)
+                # We should have 4 log all buffers + 1 low anomaly buffer + 1 high anomaly crossing 2 buffers
+                self.assertEqual(len(data_collector.saved_file_names), 6)
                 file_path = os.path.join(temp_dir, "all", data_collector.saved_file_names[0])
                 df = pd.read_csv(file_path, skiprows=1)
                 self.assertTrue(os.path.isfile(file_path))
@@ -415,7 +422,7 @@ class DataCollectorTest(unittest.TestCase):
                 file_list = [file for file in os.listdir(directory) if file.endswith('csv')]
                 self.assertEqual(len(file_list), 4)
                 # note index 3 is the anomaly file
-                for i in [0, 1, 2, 4]:
+                for i in [0, 1, 3, 5]:
                     file = data_collector.saved_file_names[i]
                     df = pd.read_csv(file, skiprows=1)
                     if i == 0:
@@ -423,13 +430,19 @@ class DataCollectorTest(unittest.TestCase):
                     else:
                         df_all = pd.concat([df_all, df], ignore_index=True)
                 self.assertListEqual(df_all['event'].tolist(), list(range(1, 121)))
-                file = data_collector.saved_file_names[3]
+                # test high event file
+                file = data_collector.saved_file_names[2]
                 df_anomaly = pd.read_csv(file, skiprows=1)
-                # note buffer would have wrapped round so events will not be in order
-                df_anomaly.insert(0, 'time', pd.to_datetime(df_anomaly['comp_time'], format=muon_plot.date_time_format))
+                self.assertFalse(df_anomaly['event'].tolist() == list(range(57, 87)))
+                # sort them by date/time
+                df_anomaly = df_anomaly.sort_values(by='arduino_time', ignore_index=True)
+                self.assertListEqual(df_anomaly['event'].tolist(), list(range(57, 87)))
+                # test low event file
+                file = data_collector.saved_file_names[4]
+                df_anomaly = pd.read_csv(file, skiprows=1)
                 self.assertFalse(df_anomaly['event'].tolist() == list(range(90, 120)))
                 # sort them by date/time
-                df_anomaly = df_anomaly.sort_values(by='time', ignore_index=True)
+                df_anomaly = df_anomaly.sort_values(by='arduino_time', ignore_index=True)
                 self.assertListEqual(df_anomaly['event'].tolist(), list(range(90, 120)))
 
     def test_data_collector_no_save_events(self):
@@ -565,3 +578,18 @@ class DataCollectorTest(unittest.TestCase):
                 dc._shut_down = True
                 sleep(20)
                 self.assertTrue(queue_save_path)
+
+    def test_add_datetime_column(self):
+        """Test add datetime column function."""
+        start_event = 5
+        start_datetime = datetime.now()
+        df = pd.DataFrame({'event': [3, 4, 5, 6, 1, 2],
+                           'arduino_time': [3100, 4200, 4800, 6300, 1000, 2200],
+                           'dead_time': [31, 42, 48, 63, 10, 22]})
+        muon_plot._add_datetime_column(df, start_event, start_datetime)
+        self.assertEqual(start_datetime + timedelta(milliseconds=((3100 - 31) - (4800 - 48))), df.loc[0, 'utc_time'])
+        self.assertEqual(start_datetime + timedelta(milliseconds=((6300 - 63) - (4800 - 48))), df.loc[3, 'utc_time'])
+        self.assertEqual(start_datetime + timedelta(milliseconds=((2200 - 22) - (4800 - 48))), df.loc[5, 'utc_time'])
+
+
+

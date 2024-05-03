@@ -3,14 +3,15 @@
         "name": "",
         "password": "",
         "latitude": 0.0,
-        "longitude": 0.0
+        "longitude": 0.0,
+        "height_above_sea_level": 0
     },
     "event_files": {
         "root_dir": "~/muon_data",
         "save_all": true
     },
     "system": {
-        "buff_size": 210,
+        "buff_size": 110,
         "window_size": 10,
         "anomaly_threshold": 3.0,
         "logging_level": "INFO",

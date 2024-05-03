@@ -20,7 +20,7 @@ from ftplib import FTP
 from datetime import datetime, timezone
 
 DATE_TIME_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
-VERSION: str = "0.2.5"
+VERSION: str = "0.3.0"
 
 
 class Status(Enum):
@@ -119,6 +119,7 @@ class DataCollector:
                                    'temp': pd.Series(dtype='float'),
                                    'win_f': pd.Series(dtype='float'),
                                    'median_f': pd.Series(dtype='float')})
+        self._buff_date_time_start = ""
         signal.signal(signal.SIGINT, self._signal_handler)
 
     def __enter__(self):
@@ -228,22 +229,22 @@ class DataCollector:
             return False
         self._saved_file_names.append(file_path)
         with open(file_path, 'a') as f:
-            f.write(f"{VERSION}, {self._user_id}, {self._buff_size}, {self._window_size}, {self._anomaly_threshold}\n")
+            f.write(f"{VERSION}, {self._user_id},{self._buff_size},{self._window_size},"
+                    f"{self._anomaly_threshold},{self._buff_start_event},{self._buff_date_time_start}\n")
             self._buff.to_csv(f, index=False, date_format=DATE_TIME_FORMAT, lineterminator='\n')
         return True
 
     def _save_buff(self, sub_dir=""):
         """Save current content of buffer."""
-        # name of saved file is based on time of the penultimate entry in the buffer
-        index = self._buff_index - 1 if self._buff_index > 0 else self._buff_size - 1
-        file_name = pd.to_datetime(self._buff['comp_time'][index]).strftime("%Y%m%d-%H%M%S.csv")
+        # file name is UTC of first event
+        middle_event_number = self._buff.loc[self._buff.index[int(self._buff_size / 2)], 'event']
+        file_name = f"{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{str(middle_event_number)}.csv"
         file_dir = os.path.join(self._save_dir, sub_dir)
         if not os.path.isdir(file_dir):
             logging.info(f"Creating directory {file_dir}")
             os.makedirs(file_dir)
         file_path = os.path.join(file_dir, file_name)
         logging.info(f"Saving buffer to file {file_path}")
-        # self._buff.to_csv(file_path, index=False, date_format=date_time_format)
         if self._write_csv(file_path):
             if sub_dir == "anomaly":
                 # queue buffer file name to be saved remotely on separate thread
@@ -265,17 +266,14 @@ class DataCollector:
     def _update_frequency_history(self, cur_buff_index: int) -> bool:
         """With a new window set of data available update the window event frequency history and look for anomalies."""
         window_data = self._buff.iloc[self._window_buff_indices]
-        window_data.loc[window_data.index[:], 'comp_time'] = (
-            pd.to_datetime(window_data.loc[window_data.index[:], 'comp_time'], format=self._date_time_format))
-        # TODO possible fix if SettingWithCopyWarning persists:
-        # x = window_data.loc[window_data.index[:], 'comp_time'].copy()
-        # window_data.loc[window_data.index[:], 'comp_time'] = pd.to_datetime(x, format=self._date_time_format)
-        window_data = window_data.sort_values(by='comp_time', ignore_index=True)
-        windows_time_diff = (window_data.loc[window_data.index[-1], 'comp_time'] -
-                             window_data.loc[window_data.index[0], 'comp_time'])
-        arduino_time_diff = (int(window_data.loc[window_data.index[-1], 'arduino_time']) -
-                             int(window_data.loc[window_data.index[0], 'arduino_time'])) / 1000.0
-        window_freq = len(window_data) / windows_time_diff.total_seconds()
+        window_data = window_data.sort_values(by='arduino_time', ignore_index=True)
+        windows_time_start = (window_data.loc[window_data.index[0], 'arduino_time'] -
+                              window_data.loc[window_data.index[0], 'dead_time'])
+        windows_time_end = (window_data.loc[window_data.index[-1], 'arduino_time'] -
+                            window_data.loc[window_data.index[-1], 'dead_time'])
+        windows_time_diff = (windows_time_end - windows_time_start) / 1000.0
+        window_freq = len(window_data) / windows_time_diff
+
         if self._frequency_array_full:
             # update buffer by removing the oldest window frequency and adding latest frequency
             self._frequency_array = np.roll(self._frequency_array, -1)
@@ -376,6 +374,7 @@ class DataCollector:
                 logging.info("Detector is re-starting - resetting for new acquisition...")
                 self._reset()
                 continue
+
             data_list = data.split()
             if len(data_list) < 6:
                 logging.info(f"Bad event line detected '{data}'")
@@ -387,8 +386,14 @@ class DataCollector:
             data_list[3] = float(data_list[3])  # SIPM
             data_list[4] = int(data_list[4])    # dead time
             data_list[5] = float(data_list[5])  # temp
-            data_list.extend([np.NaN, np.NaN])
+            data_list.extend([pd.NA, pd.NA])
+
             date_time_now = datetime.now(timezone.utc)
+            if self._buff_index == 0:
+                self._buff_date_time_start = date_time_now
+                self._buff_start_event = data_list[0]
+                logging.info(f"New buffer starting at event {self._buff_start_event} on {self._buff_date_time_start}")
+
             data_list = [date_time_now.strftime(self._date_time_format)[:-3]] + data_list
             if self._event_counter < 10:
                 # always log first few events

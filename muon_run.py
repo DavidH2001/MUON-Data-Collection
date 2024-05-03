@@ -96,6 +96,9 @@ def _check_config(config):
             (math.isclose(config["user"]["latitude"], 0.0) and math.isclose(config["user"]["longitude"], 0.0) or not
                 isinstance(config["user"]["latitude"], float) or not isinstance(config["user"]["longitude"], float))):
         raise ValueError("Please edit config.json to define the user latitude and longitude decimal values.")
+    if ("user" not in config or "height_above_sea_level" not in config["user"] or
+            not isinstance(config["user"]["height_above_sea_level"], int)):
+        raise ValueError("The user height_above_sea_level is missing or defined with incorrect type.")
     if "system" not in config or not isinstance(config["system"], dict):
         raise ValueError("Invalid config.json file detected.")
     if "buff_size" not in config["system"] or not isinstance(config["system"]["buff_size"], int):
@@ -144,7 +147,8 @@ def run():
     anomaly_threshold = config.get("system", None).get("anomaly_threshold", 3.0)
 
     root_dir = os.path.expanduser(config['event_files']['root_dir'])
-    user_id = f"{config['user']['name']}_{str(config['user']['latitude'])}_{str(config['user']['longitude'])}"
+    user_id = (f"{config['user']['name']}_{str(config['user']['latitude'])}_{str(config['user']['longitude'])}_"
+               f"{str(config['user']['height_above_sea_level'])}")
     user_id = user_id.replace('.', '_')
     print(f"user_id={user_id}")
     print(f"buff_size={buff_size}, window_size={window_size}, anomaly_threshold={anomaly_threshold}")
@@ -193,7 +197,8 @@ def run():
 
     logging.info(f'Running detection software V{VERSION} using {log_level} logging level')
     logging.info(f"buff_size={buff_size}, window_size={window_size}, anomaly_threshold={anomaly_threshold}")
-    logging.info(f"user_id={user_id}, latitude={config['user']['latitude']}, longitude={config['user']['longitude']}")
+    logging.info(f"user_id={user_id}, latitude={config['user']['latitude']}, longitude={config['user']['longitude']}, "
+                 f"HASL={config['user']['height_above_sea_level']}")
     dc.acquire_data()
     if config['remote']['ip_address'] != "":
         dc.run_remote()

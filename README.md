@@ -25,9 +25,10 @@ When a valid event line is received the detection sequence will begin and contin
 a Ctrl-C signal or the system is rebooted. The detector activity can be monitored via the command console used to run the 
 software or via browsing a log file written to a specified root directory. During runtime, all events are saved to a memory 
 buffer along with separate frequency information that is calculated using a window that slides across the buffer. The 
-detection of anomalies starts when the event buffer has been initially filled which could take up to 20 minutes using
+detection of anomalies starts when the event buffer has been initially filled which could take up to 10 minutes using
 default settings. Detection involves comparing the current central buffer event frequency to the current buffer median 
-(Muon base level) frequency. A configurable thresholding factor defines when an anomaly occurs. 
+(Muon base level) frequency. All frequencies are calculated using the Arduino and dead times supplied from the detector. 
+A configurable thresholding factor defines when an anomaly occurs. 
 The correspondence given via the [UKRAA](https://www.ukraa.com/) provides evidence that the Muon rates can vary 
 between detectors. This could be explained for a number of reasons e.g., how the detectors were constructed, a variation 
 in the components used, detector location, etc. The dynamic base level comparison used by the detection software will 
@@ -63,6 +64,7 @@ required:
 * "user password" - designated password name for connecting to remote file server. Optional, can be left blank.
 * "user latitude" - float value representing the latitude of the user's detectors in degrees and decimal minutes. 
 * "user longitude" - float value representing the longitude of the user's detectors in degrees and decimal minutes.
+* "user height_above_sea_level" - the detectors height above sea level in meters. 
 * "event_files root_dir" - string defining an existing directory where your event files will be saved locally. You must create this directory.
 * "event_files save_all" - set to *true* (default) if wanting to save all event buffers to files. 
 * "system buff_size" - size of event buffer. Can leave set to the default.
@@ -77,17 +79,18 @@ Example config.json file:
 ```
 {
     "user": {
-        "name": "Dave",
+        "name": "",
         "password": "",
         "latitude": 50.81,
-        "longitude": -1.22
+        "longitude": -1.22,
+        "height_above_sea_level": 0
     },
     "event_files": {
         "root_dir": "~/muon_data",
         "save_all": true
     },
     "system": {
-        "buff_size": 210,
+        "buff_size": 110,
         "window_size": 10,
         "anomaly_threshold": 4.0,
         "logging_level": "INFO",
@@ -199,20 +202,21 @@ a valid *name*, *password* and *ip_address*. It is also important to make sure y
 correctly for your detectors as these, along with the username, will be used to create a personal directory on the FTP 
 server.
 
-```commandline
+```python
 {
     "user": {
         "name": "Dave",
         "password": "TheSeverPassword",
         "latitude": 50.81,
-        "longitude": -1.22
+        "longitude": -1.22,
+        "height_above_sea_level": 0
     },
     "event_files": {
         "root_dir": "~/muon_data",
         "save_all": true
     },
     "system": {
-        "buff_size": 210,
+        "buff_size": 110,
         "window_size": 10,
         "anomaly_threshold": 4.0,
         "logging_level": "INFO",
@@ -257,7 +261,8 @@ single_dir_name = "240424_104334"
 The following plot example shows all the saved buffers at the top with the detected anomaly buffers shown at the 
 bottom. The individual events are represented by the SIPM values (red dots) whilst the shifting window frequency is 
 represented by the silver line plot. The gray crosses in the top plot represent the median frequency of the buffer lying
-to the left. 
+to the left. The x-axis is the UTC event time stamp which is added to the buffer during collection which is independent
+of the arduino time.
 
 ![](/doc/image_plot.png)
 

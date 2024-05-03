@@ -2,8 +2,10 @@ import os.path
 import pandas as pd
 import json
 from os import listdir
-from data_collector import VERSION
+from data_collector import VERSION, DATE_TIME_FORMAT
 import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
+from typing import Tuple
 
 """
 MUON data collection project.
@@ -12,6 +14,28 @@ Original development by Dave Hardwick
 """
 
 date_time_format: str = "%Y%m%d %H%M%S.%f"
+
+
+def _add_datetime_column(buff: pd.DataFrame, start_event: int, start_datetime) -> None:
+    """Calculate and add column representing UTC time for each event."""
+    # TODO this function is not used. Delete if not implemented soon.
+    start_event_row = buff[buff['event'] == start_event]
+    start_time = (start_event_row['arduino_time'] - start_event_row['dead_time']).values[0]
+    datetime_column = [start_datetime + timedelta(milliseconds=int((x['arduino_time'] - x['dead_time']) - start_time))
+                       for _, x in buff[['arduino_time', 'dead_time']].iterrows()]
+    buff['utc_time'] = datetime_column
+
+
+def _read_csv(file_path) -> Tuple[pd.DataFrame, int, datetime]:
+    """Read event data from CSV file."""
+    # TODO this function is not used. Keep as may be useful soon.
+    with open(file_path, 'r') as f:
+        line = f.readline().rstrip('\n')
+        meta_data_list = line.split(sep=',')
+    start_event = int(meta_data_list[5].strip())
+    start_datetime = datetime.strptime(meta_data_list[6].strip(), date_time_format)
+    df = pd.read_csv(file_path, skiprows=1)
+    return df, start_event, start_datetime
 
 
 def get_data_file(file: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
@@ -97,7 +121,7 @@ def main():
     root_dir = os.path.expanduser(config['event_files']['root_dir'])
     # Alternatively, you can point to the project example data directory as shown here:
     # root_dir = "data"
-    # set single folder name here or leave empty for all folders to be accessed under root directory
+    # Set single folder name here or leave empty for all folders to be accessed under root directory:
     single_dir_name = ""
     directory_list = [os.path.join(root_dir, single_dir_name)]
     # all folders
