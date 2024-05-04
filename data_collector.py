@@ -245,10 +245,9 @@ class DataCollector:
             os.makedirs(file_dir)
         file_path = os.path.join(file_dir, file_name)
         logging.info(f"Saving buffer to file {file_path}")
-        if self._write_csv(file_path):
-            if sub_dir == "anomaly":
-                # queue buffer file name to be saved remotely on separate thread
-                self._file_queue.put(file_path)
+        if self._write_csv(file_path) and sub_dir == "anomaly":
+            # queue buffer file name to be saved remotely on separate thread
+            self._file_queue.put(file_path)
 
     def _check_for_anomaly(self, mid_frequency) -> bool:
         """Check for event anomaly."""
