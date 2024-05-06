@@ -192,6 +192,7 @@ class DataCollectorTest(unittest.TestCase):
             while not dc.processing_ended:
                 sleep(0.01)
             self.assertEqual(dc.event_counter, self.max_events_to_be_processed)
+            self.assertEqual(dc._frequency_index, 1)
             self.assertEqual(dc._buff_index, window_size)
             self.assertTrue(np.allclose(dc._frequency_array[1:], np.zeros(buff_size - 1)))
             self.assertGreater(dc._frequency_array[0], 1.0)
@@ -207,6 +208,7 @@ class DataCollectorTest(unittest.TestCase):
                 sleep(0.01)
             self.assertEqual(dc.event_counter, self.max_events_to_be_processed)
             self.assertEqual(dc._buff_index, 2 * window_size)
+            self.assertEqual(dc._frequency_index, 1 + window_size)
             self.assertTrue(np.allclose(dc._frequency_array[5:], np.zeros(buff_size - 5)))
             self.assertEqual(f1[0], dc._frequency_array[0])
             self.assertGreater(dc._frequency_array[1], 1.0)
@@ -226,6 +228,7 @@ class DataCollectorTest(unittest.TestCase):
                 sleep(0.01)
             self.assertEqual(dc.event_counter, self.max_events_to_be_processed)
             self.assertEqual(dc._buff_index, 0)
+            self.assertEqual(dc._frequency_index, 1 + 2 * window_size)
             self.assertGreater(dc._frequency_array[0], 1.0)
             self.assertEqual(f2[0], dc._frequency_array[0])
             self.assertEqual(f2[1], dc._frequency_array[1])
@@ -245,13 +248,15 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._buff.loc[11, 'win_f'], dc._frequency_array[8])
             f3 = dc.frequency_array.copy()
 
-            # Collect another 1 window lengths (now 4 in total) which means we should have wrapped round.
+            # Collect another 1 window lengths (now 4 in total) which means we should have wrapped round the frequency
+            # array.
             self.max_events_to_be_processed = 4 * window_size
             dc.acquire_data()
             while not dc.processing_ended:
                 sleep(0.01)
             self.assertEqual(dc.event_counter, self.max_events_to_be_processed)
             self.assertEqual(dc._buff_index, 4)
+            self.assertEqual(dc._frequency_index, 1)
             # remember that the frequency array shifts to the left
             self.assertEqual(dc._frequency_array[0], f3[1])
             self.assertEqual(dc._frequency_array[1], f3[2])
