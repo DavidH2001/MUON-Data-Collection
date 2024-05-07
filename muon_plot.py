@@ -96,6 +96,7 @@ def get_data_dirs(dir_list: list, sub_folder: str = None) -> Tuple[pd.DataFrame,
     win_f_df = None
     median_f_df = None
     sipm_df = None
+    metadata = None
     for i, directory in enumerate(dir_list):
         print(directory)
         if not os.path.isdir(os.path.join(directory, sub_folder)):
@@ -160,9 +161,9 @@ def main():
         ax2_2.set_ylim(ax1_2.get_ylim())
         ax2.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
         ax2_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)
+        ax2.set_title(f"Anomaly Buffers [{metadata['user_id']}  Bn:{metadata['Bn']}  Wn:{metadata['Wn']}  "
+                      f"Thresh:{metadata['threshold']}]", fontsize=9)
     ax2.grid()
-    ax2.set_title(f"Anomaly Buffers [{metadata['user_id']}  Bn:{metadata['Bn']}  Wn:{metadata['Wn']}  "
-                  f"Thresh:{metadata['threshold']}]", fontsize=9)
 
     plt.tight_layout()
     plt.gcf().autofmt_xdate()
