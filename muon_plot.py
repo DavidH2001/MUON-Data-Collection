@@ -44,7 +44,6 @@ def get_data_file(file_path: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFr
     :return:
     """
     print(file_path)
-    # df = pd.read_csv(file_path, skiprows=1)
     df, metadata = _read_csv(file_path)
     win_f_df = df.loc[df['win_f'].notna()]
     median_f_df = df.loc[df['median_f'].notna()]
@@ -87,7 +86,7 @@ def get_data_dir(directory: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     return win_f_df, median_f_df, sipm_df, first_metadata
 
 
-def get_data_dirs(dir_list: str, sub_folder: str = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
+def get_data_dirs(dir_list: list, sub_folder: str = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
     """
     Get data from all listed directories.
     :param dir_list:
@@ -133,14 +132,14 @@ def main():
                           os.path.isdir(os.path.join(root_dir, name))]
 
     # set up for plotting
-    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
+    _, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
 
     # all event plotting
     ax1_2 = ax1.twinx()
     ax1.set_xlabel('Date/Time (UTC)')
     ax1.set_ylabel('Window Freq (Hz)')
     ax1_2.set_ylabel('SIPM (mV)')
-    win_f_df, median_f_d, sipm, metadata = get_data_dirs(directory_list, "all")
+    win_f_df, _, sipm, metadata = get_data_dirs(directory_list, "all")
     if win_f_df is not None:
         ax1.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
         ax1.plot(win_f_df['time'].values, win_f_df['median_f'].values, '+', color='gray')
@@ -156,7 +155,7 @@ def main():
     # anomaly event plotting
     ax2.set_xlabel('Date/Time (UTC)')
     ax2.set_ylabel('Window Freq (Hz)')
-    win_f_df, median_f_d, sipm, meta_data = get_data_dirs(directory_list, "anomaly")
+    win_f_df, _, sipm, metadata = get_data_dirs(directory_list, "anomaly")
     if win_f_df is not None:
         ax2_2.set_ylim(ax1_2.get_ylim())
         ax2.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')

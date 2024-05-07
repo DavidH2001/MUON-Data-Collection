@@ -8,6 +8,7 @@ Original development by Dave Hardwick
 from enum import Enum
 import os.path
 import sys
+import math
 import signal
 import threading
 import queue
@@ -20,7 +21,7 @@ from ftplib import FTP
 from datetime import datetime, timezone
 
 DATE_TIME_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
-VERSION: str = "0.3.0"
+VERSION: str = "0.3.1"
 
 
 class Status(Enum):
@@ -76,7 +77,6 @@ class DataCollector:
         self._ignore_event_count = 0
         if self._buff_size % self._window_size != 0:
             raise ValueError("Require buff size is an odd multiple of window size.")
-        # self._frequency_array: np.array = np.zeros(self._buff_size // self._window_size)
         self._frequency_array: np.array = np.zeros(self._buff_size)
         self._mid_frequency_index = self.frequency_array.size // 2
         self._frequency_median: float = 0.0
@@ -229,7 +229,8 @@ class DataCollector:
             return False
         self._saved_file_names.append(file_path)
         with open(file_path, 'a') as f:
-            f.write(f"{VERSION}, {self._user_id},{self._buff_size},{self._window_size},"
+            # write metadata first
+            f.write(f"{VERSION},{self._user_id},{self._buff_size},{self._window_size},"
                     f"{self._anomaly_threshold},{self._buff_start_event},{self._buff_date_time_start}\n")
             self._buff.to_csv(f, index=False, date_format=DATE_TIME_FORMAT, lineterminator='\n')
         return True
@@ -364,7 +365,7 @@ class DataCollector:
                         continue
                     if len(data.split()) < 6:
                         continue
-                    logging.info(f"Event line detected - beginning acquisition")
+                    logging.info("Event line detected - beginning acquisition")
                     logging.info("Note, only first 10 events will be displayed if logging at INFO level...")
                     self._look_for_start = False
 
@@ -427,7 +428,7 @@ class DataCollector:
                     break
 
             # anomaly check
-            if self._anomaly_threshold != 0.0 and self._frequency_array_full:
+            if not math.isclose(self._anomaly_threshold, 0.0) and self._frequency_array_full:
                 if self._check_for_anomaly(self.frequency_array[self._mid_frequency_index]):
                     if self._save_dir and self._ignore_event_count == 0:
                         self._ignore_event_count = 1 * self._window_size
