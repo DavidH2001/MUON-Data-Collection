@@ -197,6 +197,10 @@ class DataCollectorTest(unittest.TestCase):
             self.assertTrue(np.allclose(dc._frequency_array[1:], np.zeros(buff_size - 1)))
             self.assertGreater(dc._frequency_array[0], 1.0)
             self.assertEqual(dc._buff.loc[3, 'win_f'], dc._frequency_array[0])
+            start = dc._buff.loc[0, 'arduino_time'] - dc._buff.loc[0, 'dead_time']
+            finish = dc._buff.loc[window_size - 1, 'arduino_time'] - dc._buff.loc[3, 'dead_time']
+            freq = float(window_size) / ((finish - start) / 1000.0)
+            self.assertEqual(dc._frequency_array[0], freq)
             f1 = dc.frequency_array.copy()
 
             # Collect another window length of events so frequency array should now contain an additional value for
@@ -219,6 +223,14 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._buff.loc[5, 'win_f'], dc._frequency_array[2])
             self.assertEqual(dc._buff.loc[6, 'win_f'], dc._frequency_array[3])
             self.assertEqual(dc._buff.loc[7, 'win_f'], dc._frequency_array[4])
+            start = dc._buff.loc[1, 'arduino_time'] - dc._buff.loc[1, 'dead_time']
+            finish = dc._buff.loc[window_size, 'arduino_time'] - dc._buff.loc[window_size, 'dead_time']
+            freq = float(window_size) / ((finish - start) / 1000.0)
+            self.assertEqual(dc._frequency_array[1], freq)
+            start = dc._buff.loc[2, 'arduino_time'] - dc._buff.loc[2, 'dead_time']
+            finish = dc._buff.loc[window_size + 1, 'arduino_time'] - dc._buff.loc[window_size + 1, 'dead_time']
+            freq = float(window_size) / ((finish - start) / 1000.0)
+            self.assertEqual(dc._frequency_array[2], freq)
             f2 = dc.frequency_array.copy()
 
             # Collect another 1 window lengths (now 3 in total) which means we should have reached end of buffer.
@@ -248,8 +260,9 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._buff.loc[11, 'win_f'], dc._frequency_array[8])
             f3 = dc.frequency_array.copy()
 
-            # Collect another 1 window lengths (now 4 in total) which means we should have wrapped round the frequency
-            # array.
+            # Collect another 1 window lengths (now 4 in total) which means we should have shifted the frequency array
+            # once to the left with latest value now always being on the right end. The event buffer is filling from the
+            # start again so these events will occupy the first 4 locations.
             self.max_events_to_be_processed = 4 * window_size
             dc.acquire_data()
             while not dc.processing_ended:
@@ -274,6 +287,12 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._buff.loc[1, 'win_f'], dc._frequency_array[9])
             self.assertEqual(dc._buff.loc[2, 'win_f'], dc._frequency_array[10])
             self.assertEqual(dc._buff.loc[3, 'win_f'], dc._frequency_array[11])
+            self.assertEqual(dc._buff.loc[0, 'event'], buff_size + 1)
+            start = dc._buff.loc[0, 'arduino_time'] - dc._buff.loc[0, 'dead_time']
+            self.assertEqual(dc._buff.loc[window_size - 1, 'event'], buff_size + window_size)
+            finish = dc._buff.loc[window_size - 1, 'arduino_time'] - dc._buff.loc[window_size - 1, 'dead_time']
+            freq = float(window_size) / ((finish - start) / 1000.0)
+            self.assertEqual(dc._frequency_array[-1], freq)
             f4 = dc.frequency_array.copy()
 
             # Collect another 2 events.
