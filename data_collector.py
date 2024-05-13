@@ -56,7 +56,6 @@ class DataCollector:
                log_all_events: Set to True to log all events to file(s). Defaults to True.
                ignore_header_size: Number of initial data lines to be ignored that represent the header. Defaults to 6.
                start_string: String sent from detector that will initiate event capture. Defaults to "" i.e. not used.
-               use_arduino_time: Use Arduino timing if True else use PC clock. Defaults to False.
                user_id: Unique user identity string.
                user_name:
                user_password:

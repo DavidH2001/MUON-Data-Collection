@@ -125,7 +125,7 @@ def main():
     # Alternatively, you can point to the project example data directory as shown here:
     # root_dir = "data"
     # Set single folder name here or leave empty for all folders to be accessed under root directory:
-    single_dir_name = ""
+    single_dir_name = "240505_202322_110_10_4"
     directory_list = [os.path.join(root_dir, single_dir_name)]
     # all folders
     if not single_dir_name:

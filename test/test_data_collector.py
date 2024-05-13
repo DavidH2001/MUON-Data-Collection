@@ -52,7 +52,7 @@ class DataCollectorTest(unittest.TestCase):
             else:
                 result = self.data[self.data_index]
                 if self.use_arduino_time:
-                    sleep(0.1)
+                    sleep(0.01)
                 else:
                     # Sleep off the difference between previous and current arduino times so as PC clock will
                     # approximate the time difference.
@@ -67,15 +67,9 @@ class DataCollectorTest(unittest.TestCase):
             return result
 
         self.data_index = 0
-        self.use_arduino_time = False
+        self.use_arduino_time = True
         self.previous_arduino_time = 0
         self.max_events_to_be_processed = None
-
-        # Get and prepare test data from CSV file.
-        self.df = pd.read_csv("./data/event_test_set2.csv", dtype={0: str, 1: str}).iloc[:, 0:7]
-        self.data = [f"{row[0]} {row[1]} {row[2]} {row[3]} {row[4]} {row[5]} {row[6]}".encode() for _, row in
-                     self.df.iterrows()]
-        self.data.append(b'exit')
         self._data_func = _data_func
 
         # Mock the data collector com_port returned by serial package. The above data will be returned
@@ -89,6 +83,13 @@ class DataCollectorTest(unittest.TestCase):
         mock_serial = Mock()
         DataCollector.serial = mock_serial
         mock_serial.Serial.return_value = self.mock_com_port
+
+    def _load_data(self, file_path: str):
+        # Get and prepare test data from CSV file.
+        self.df = pd.read_csv(file_path, dtype={0: str, 1: str}).iloc[:, 0:7]
+        self.data = [f"{row[0]} {row[1]} {row[2]} {row[3]} {row[4]} {row[5]} {row[6]}".encode() for _, row in
+                     self.df.iterrows()]
+        self.data.append(b'exit')
 
     def test_config(self):
         """Test configuration file access."""
@@ -177,6 +178,7 @@ class DataCollectorTest(unittest.TestCase):
         number of consecutive batches testing the collector status as we go. This test defines a buffer of 12 events
         using a window size of 4 events which results in a frequency array of size 3.
         """
+        self._load_data("./data/event_test_set2.csv")
         window_size = 4
         buff_size = 12
         with DataCollector(self.mock_com_port,
@@ -328,6 +330,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_median_frequency(self):
         """Test the calculation of median on filling the frequency array."""
+        self._load_data("./data/event_test_set2.csv")
         window_size = 4
         buff_size = 12
         with DataCollector(self.mock_com_port,
@@ -354,6 +357,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_exceed_max_median_frequency(self):
         """Test data collector exits due to high median frequency detected."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 5
             buff_size = 25
@@ -371,6 +375,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_event_anomalies(self):
         """Test logging of event anomalies to file. test data contains a single high and low event anomaly."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 5
             buff_size = 25
@@ -405,8 +410,51 @@ class DataCollectorTest(unittest.TestCase):
                 # check low anomaly is in center of saved event buffer
                 self.assertIn(df['event'][df.shape[0] // 2], [104, 105])
 
+    def test_data_collector_event_anomalies_data_set_3(self):
+        """Test logging of event anomalies using data set 3."""
+        self._load_data("./data/event_test_set3.csv")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window_size = 5
+            buff_size = 25
+            # try with threshold set too high
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               ignore_header_size=0,
+                               anomaly_threshold=12.0,
+                               log_all_events=False,
+                               max_median_frequency=3.0) as data_collector:
+                data_collector.acquire_data()
+                while not data_collector.processing_ended:
+                    sleep(0.01)
+                self.assertIn(len(data_collector.saved_file_names), [0])
+
+            # now with threshold within scope
+            self.data_index = 0
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               ignore_header_size=0,
+                               anomaly_threshold=10.0,
+                               log_all_events=False,
+                               max_median_frequency=3.0) as data_collector:
+                data_collector.acquire_data()
+                while not data_collector.processing_ended:
+                    sleep(0.01)
+                self.assertIn(len(data_collector.saved_file_names), [1])
+                self.assertTrue(os.path.isdir(os.path.join(temp_dir, "anomaly")))
+                file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
+                self.assertTrue(os.path.isfile(file_path))
+                df = pd.read_csv(file_path, skiprows=1)
+                df = df.sort_values(by=['event'], ignore_index=True)
+                # check expected high anomaly is in center of saved event buffer
+                self.assertEqual(df['event'][df.shape[0] // 2], 34)
+
     def test_data_collector_log_all_events(self):
         """Test logging of all events to file."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 10
             buff_size = 30
@@ -471,6 +519,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_no_save_events(self):
         """Test that no files are saved if not setting save_dir."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 5
             buff_size = 25
@@ -489,6 +538,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_start_string(self):
         """Test start acquisition trigger string."""
+        self._load_data("./data/event_test_set2.csv")
         start_string = b"Kaz"
         event_index = 6
         self.data[event_index] = start_string
@@ -517,6 +567,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_start_string_fail(self):
         """Test start acquisition trigger string fails."""
+        self._load_data("./data/event_test_set2.csv")
         start_string = "Kaz"
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 10
@@ -580,6 +631,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_file_queue(self):
         """Test preservation of event anomaly file names to queue/file."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             queue_save_path = os.path.join(temp_dir, "queue.txt")
             with DataCollector(self.mock_com_port,
