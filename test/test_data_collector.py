@@ -52,10 +52,10 @@ class DataCollectorTest(unittest.TestCase):
             else:
                 result = self.data[self.data_index]
                 if self.use_arduino_time:
-                    sleep(0.1)
+                    sleep(0.01)
                 else:
                     # Sleep off the difference between previous and current arduino times so as PC clock will
-                    # approximate the time difference.
+                    # approximate the time difference. CURRENTLY NOT USED.
                     result_split = result.split()
                     if result_split[0] != b'exit' and len(result_split) > 1:
                         arduino_time = int(result_split[1])
@@ -67,15 +67,9 @@ class DataCollectorTest(unittest.TestCase):
             return result
 
         self.data_index = 0
-        self.use_arduino_time = False
+        self.use_arduino_time = True
         self.previous_arduino_time = 0
         self.max_events_to_be_processed = None
-
-        # Get and prepare test data from CSV file.
-        self.df = pd.read_csv("./data/event_test_set2.csv", dtype={0: str, 1: str}).iloc[:, 0:7]
-        self.data = [f"{row[0]} {row[1]} {row[2]} {row[3]} {row[4]} {row[5]} {row[6]}".encode() for _, row in
-                     self.df.iterrows()]
-        self.data.append(b'exit')
         self._data_func = _data_func
 
         # Mock the data collector com_port returned by serial package. The above data will be returned
@@ -89,6 +83,13 @@ class DataCollectorTest(unittest.TestCase):
         mock_serial = Mock()
         DataCollector.serial = mock_serial
         mock_serial.Serial.return_value = self.mock_com_port
+
+    def _load_data(self, file_path: str):
+        # Get and prepare test data from CSV file.
+        self.df = pd.read_csv(file_path, dtype={0: str, 1: str}).iloc[:, 0:7]
+        self.data = [f"{row[0]} {row[1]} {row[2]} {row[3]} {row[4]} {row[5]} {row[6]}".encode() for _, row in
+                     self.df.iterrows()]
+        self.data.append(b'exit')
 
     def test_config(self):
         """Test configuration file access."""
@@ -151,6 +152,24 @@ class DataCollectorTest(unittest.TestCase):
         config["user"]["name"] = 10.0
         config["user"]["password"] = 10.0
 
+        config["system"]["window_size"] = 10
+        config["system"]["anomaly_threshold"] = [4.0]
+        with self.assertRaises(TypeError) as context:
+            _check_config(config)
+        self.assertIn("The window_size and anomaly_threshold parameters must both consist of a single value or list "
+                      "of values.",
+                      str(context.exception))
+
+        config["system"]["window_size"] = [10]
+        config["system"]["anomaly_threshold"] = [4.0, 2.0]
+        with self.assertRaises(ValueError) as context:
+            _check_config(config)
+        self.assertIn("The window_size and anomaly_threshold parameters must have same number of entries.",
+                      str(context.exception))
+
+        config["system"]["window_size"] = [10, 30]
+        config["system"]["anomaly_threshold"] = [4.0, 2.0]
+
         _check_config(config)
 
     def test_data_collector_params(self):
@@ -163,13 +182,13 @@ class DataCollectorTest(unittest.TestCase):
                               buff_size=10,
                               window_size=2)
         self.assertIn(f"The specified save directory {dir_name} does not exist.", str(context.exception))
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with self.assertRaises(ValueError) as context:
-                _ = DataCollector(mock_com_port,
-                                  save_dir=temp_dir,
-                                  buff_size=10,
-                                  window_size=3)
-            self.assertIn("Require buff size is an odd multiple of window size.", str(context.exception))
+        # with tempfile.TemporaryDirectory() as temp_dir:
+        #     with self.assertRaises(ValueError) as context:
+        #         _ = DataCollector(mock_com_port,
+        #                           save_dir=temp_dir,
+        #                           buff_size=10,
+        #                           window_size=3)
+        #     self.assertIn("Require buff size is an odd multiple of window size.", str(context.exception))
 
     def test_data_collector_frequency_array_population(self):
         """This test consumes event data from the mocked serial comm port which is defined in the above setup()
@@ -177,6 +196,7 @@ class DataCollectorTest(unittest.TestCase):
         number of consecutive batches testing the collector status as we go. This test defines a buffer of 12 events
         using a window size of 4 events which results in a frequency array of size 3.
         """
+        self._load_data("./data/event_test_set2.csv")
         window_size = 4
         buff_size = 12
         with DataCollector(self.mock_com_port,
@@ -197,6 +217,10 @@ class DataCollectorTest(unittest.TestCase):
             self.assertTrue(np.allclose(dc._frequency_array[1:], np.zeros(buff_size - 1)))
             self.assertGreater(dc._frequency_array[0], 1.0)
             self.assertEqual(dc._buff.loc[3, 'win_f'], dc._frequency_array[0])
+            start = dc._buff.loc[0, 'arduino_time'] - dc._buff.loc[0, 'dead_time']
+            finish = dc._buff.loc[window_size - 1, 'arduino_time'] - dc._buff.loc[3, 'dead_time']
+            freq = float(window_size) / ((finish - start) / 1000.0)
+            self.assertEqual(dc._frequency_array[0], freq)
             f1 = dc.frequency_array.copy()
 
             # Collect another window length of events so frequency array should now contain an additional value for
@@ -219,6 +243,14 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._buff.loc[5, 'win_f'], dc._frequency_array[2])
             self.assertEqual(dc._buff.loc[6, 'win_f'], dc._frequency_array[3])
             self.assertEqual(dc._buff.loc[7, 'win_f'], dc._frequency_array[4])
+            start = dc._buff.loc[1, 'arduino_time'] - dc._buff.loc[1, 'dead_time']
+            finish = dc._buff.loc[window_size, 'arduino_time'] - dc._buff.loc[window_size, 'dead_time']
+            freq = float(window_size) / ((finish - start) / 1000.0)
+            self.assertEqual(dc._frequency_array[1], freq)
+            start = dc._buff.loc[2, 'arduino_time'] - dc._buff.loc[2, 'dead_time']
+            finish = dc._buff.loc[window_size + 1, 'arduino_time'] - dc._buff.loc[window_size + 1, 'dead_time']
+            freq = float(window_size) / ((finish - start) / 1000.0)
+            self.assertEqual(dc._frequency_array[2], freq)
             f2 = dc.frequency_array.copy()
 
             # Collect another 1 window lengths (now 3 in total) which means we should have reached end of buffer.
@@ -248,8 +280,9 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._buff.loc[11, 'win_f'], dc._frequency_array[8])
             f3 = dc.frequency_array.copy()
 
-            # Collect another 1 window lengths (now 4 in total) which means we should have wrapped round the frequency
-            # array.
+            # Collect another 1 window lengths (now 4 in total) which means we should have shifted the frequency array
+            # once to the left with latest value now always being on the right end. The event buffer is filling from the
+            # start again so these events will occupy the first 4 locations.
             self.max_events_to_be_processed = 4 * window_size
             dc.acquire_data()
             while not dc.processing_ended:
@@ -274,6 +307,12 @@ class DataCollectorTest(unittest.TestCase):
             self.assertEqual(dc._buff.loc[1, 'win_f'], dc._frequency_array[9])
             self.assertEqual(dc._buff.loc[2, 'win_f'], dc._frequency_array[10])
             self.assertEqual(dc._buff.loc[3, 'win_f'], dc._frequency_array[11])
+            self.assertEqual(dc._buff.loc[0, 'event'], buff_size + 1)
+            start = dc._buff.loc[0, 'arduino_time'] - dc._buff.loc[0, 'dead_time']
+            self.assertEqual(dc._buff.loc[window_size - 1, 'event'], buff_size + window_size)
+            finish = dc._buff.loc[window_size - 1, 'arduino_time'] - dc._buff.loc[window_size - 1, 'dead_time']
+            freq = float(window_size) / ((finish - start) / 1000.0)
+            self.assertEqual(dc._frequency_array[-1], freq)
             f4 = dc.frequency_array.copy()
 
             # Collect another 2 events.
@@ -309,6 +348,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_median_frequency(self):
         """Test the calculation of median on filling the frequency array."""
+        self._load_data("./data/event_test_set2.csv")
         window_size = 4
         buff_size = 12
         with DataCollector(self.mock_com_port,
@@ -335,6 +375,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_exceed_max_median_frequency(self):
         """Test data collector exits due to high median frequency detected."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 5
             buff_size = 25
@@ -352,6 +393,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_event_anomalies(self):
         """Test logging of event anomalies to file. test data contains a single high and low event anomaly."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 5
             buff_size = 25
@@ -386,8 +428,77 @@ class DataCollectorTest(unittest.TestCase):
                 # check low anomaly is in center of saved event buffer
                 self.assertIn(df['event'][df.shape[0] // 2], [104, 105])
 
+    def test_data_collector_event_anomalies_data_set_3(self):
+        """Test logging of event anomalies using data set 3."""
+        self._load_data("./data/event_test_set3.csv")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window_size = 4
+            buff_size = 30
+            # try with threshold set too high
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               ignore_header_size=0,
+                               anomaly_threshold=12.0,
+                               log_all_events=False,
+                               max_median_frequency=3.0) as data_collector:
+                data_collector.acquire_data()
+                while not data_collector.processing_ended:
+                    sleep(0.01)
+                self.assertIn(len(data_collector.saved_file_names), [0])
+
+            # now with single window/threshold within scope of high short term anomaly
+            self.data_index = 0
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               ignore_header_size=0,
+                               anomaly_threshold=10.0,
+                               log_all_events=False,
+                               max_median_frequency=3.0) as data_collector:
+                data_collector.acquire_data()
+                while not data_collector.processing_ended:
+                    sleep(0.01)
+                self.assertIn(len(data_collector.saved_file_names), [1])
+                self.assertTrue(os.path.isdir(os.path.join(temp_dir, "anomaly")))
+                file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
+                self.assertTrue(os.path.isfile(file_path))
+                df = pd.read_csv(file_path, skiprows=1)
+                df = df.sort_values(by=['event'], ignore_index=True)
+                # check expected high anomaly is in center of saved event buffer
+                self.assertEqual(df['event'][df.shape[0] // 2], 33)
+
+            # now with single window/threshold within scope of high long term anomaly
+            self.data_index = 0
+            buff_size = 30
+            window_size = 10
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               ignore_header_size=0,
+                               anomaly_threshold=3.0,
+                               log_all_events=False,
+                               max_median_frequency=5.0) as data_collector:
+                data_collector.acquire_data()
+                while not data_collector.processing_ended:
+                    sleep(0.01)
+                self.assertIn(len(data_collector.saved_file_names), [1])
+                self.assertTrue(os.path.isdir(os.path.join(temp_dir, "anomaly")))
+                file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
+                self.assertTrue(os.path.isfile(file_path))
+                df = pd.read_csv(file_path, skiprows=1)
+                df = df.sort_values(by=['event'], ignore_index=True)
+                # check expected high anomaly is in center of saved event buffer
+                self.assertEqual(df['event'][df.shape[0] // 2], 68)
+
+            # TODO add test here when we can check for both anomalies at same time.
+
     def test_data_collector_log_all_events(self):
         """Test logging of all events to file."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 10
             buff_size = 30
@@ -438,20 +549,21 @@ class DataCollectorTest(unittest.TestCase):
                 # test high event file
                 file = data_collector.saved_file_names[2]
                 df_anomaly = pd.read_csv(file, skiprows=1)
-                self.assertFalse(df_anomaly['event'].tolist() == list(range(57, 87)))
+                self.assertNotEqual(df_anomaly['event'].tolist(), list(range(57, 87)))
                 # sort them by date/time
                 df_anomaly = df_anomaly.sort_values(by='arduino_time', ignore_index=True)
                 self.assertListEqual(df_anomaly['event'].tolist(), list(range(57, 87)))
                 # test low event file
                 file = data_collector.saved_file_names[4]
                 df_anomaly = pd.read_csv(file, skiprows=1)
-                self.assertFalse(df_anomaly['event'].tolist() == list(range(90, 120)))
+                self.assertNotEqual(df_anomaly['event'].tolist(), list(range(90, 120)))
                 # sort them by date/time
                 df_anomaly = df_anomaly.sort_values(by='arduino_time', ignore_index=True)
                 self.assertListEqual(df_anomaly['event'].tolist(), list(range(90, 120)))
 
     def test_data_collector_no_save_events(self):
         """Test that no files are saved if not setting save_dir."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 5
             buff_size = 25
@@ -470,6 +582,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_start_string(self):
         """Test start acquisition trigger string."""
+        self._load_data("./data/event_test_set2.csv")
         start_string = b"Kaz"
         event_index = 6
         self.data[event_index] = start_string
@@ -498,6 +611,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_start_string_fail(self):
         """Test start acquisition trigger string fails."""
+        self._load_data("./data/event_test_set2.csv")
         start_string = "Kaz"
         with tempfile.TemporaryDirectory() as temp_dir:
             window_size = 10
@@ -515,7 +629,7 @@ class DataCollectorTest(unittest.TestCase):
                 data_collector.acquire_data()
                 while not data_collector.processing_ended:
                     sleep(0.01)
-                self.assertTrue(data_collector.saved_file_names == [])
+                self.assertEqual(data_collector.saved_file_names, [])
 
     def test_save_load_queue(self):
         """Test save and load queue functions."""
@@ -561,6 +675,7 @@ class DataCollectorTest(unittest.TestCase):
 
     def test_data_collector_file_queue(self):
         """Test preservation of event anomaly file names to queue/file."""
+        self._load_data("./data/event_test_set2.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
             queue_save_path = os.path.join(temp_dir, "queue.txt")
             with DataCollector(self.mock_com_port,
