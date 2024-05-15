@@ -94,7 +94,7 @@ def _check_config(config):
         raise ValueError(f"The root_dir '{root_dir}' defined in config.json does not exist. Please create it.")
     if ("user" not in config or "latitude" not in config["user"] or "longitude" not in config["user"] or
             (math.isclose(config["user"]["latitude"], 0.0) and math.isclose(config["user"]["longitude"], 0.0) or not
-                isinstance(config["user"]["latitude"], float) or not isinstance(config["user"]["longitude"], float))):
+            isinstance(config["user"]["latitude"], float) or not isinstance(config["user"]["longitude"], float))):
         raise ValueError("Please edit config.json to define the user latitude and longitude decimal values.")
     if ("user" not in config or "height_above_sea_level" not in config["user"] or
             not isinstance(config["user"]["height_above_sea_level"], int)):
@@ -103,11 +103,21 @@ def _check_config(config):
         raise ValueError("Invalid config.json file detected.")
     if "buff_size" not in config["system"] or not isinstance(config["system"]["buff_size"], int):
         raise ValueError("The system buff_size parameter in config.json is missing or defined with incorrect type.")
-    if "window_size" not in config["system"] or not isinstance(config["system"]["window_size"], int):
+    if "window_size" not in config["system"] or not isinstance(config["system"]["window_size"], (int, list)):
         raise ValueError("The system window_size parameter in config.json is missing or defined with incorrect type.")
-    if "anomaly_threshold" not in config["system"] or not isinstance(config["system"]["anomaly_threshold"], float):
+    if "anomaly_threshold" not in config["system"] or not isinstance(config["system"]["anomaly_threshold"],
+                                                                     (float, list)):
         raise ValueError("The system anomaly_threshold parameter in config.json is missing or defined with incorrect "
                          "type.")
+    window_size = config["system"]["window_size"]
+    threshold = config["system"]["anomaly_threshold"]
+    if (not (isinstance(window_size, int) and isinstance(threshold, float)) and
+            not (isinstance(window_size, list) and isinstance(threshold, list))):
+        raise TypeError("The window_size and anomaly_threshold parameters must both consist of a single value or "
+                        "list of values.")
+    if isinstance(window_size, list):
+        if len(window_size) != len(threshold):
+            raise ValueError("The window_size and anomaly_threshold parameters must have same number of entries.")
 
     if "remote" not in config:
         raise ValueError("invalid config file - missing a 'remote' section")

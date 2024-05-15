@@ -55,7 +55,7 @@ class DataCollectorTest(unittest.TestCase):
                     sleep(0.01)
                 else:
                     # Sleep off the difference between previous and current arduino times so as PC clock will
-                    # approximate the time difference.
+                    # approximate the time difference. CURRENTLY NOT USED.
                     result_split = result.split()
                     if result_split[0] != b'exit' and len(result_split) > 1:
                         arduino_time = int(result_split[1])
@@ -151,6 +151,24 @@ class DataCollectorTest(unittest.TestCase):
         config["user"]["height_above_sea_level"] = 10
         config["user"]["name"] = 10.0
         config["user"]["password"] = 10.0
+
+        config["system"]["window_size"] = 10
+        config["system"]["anomaly_threshold"] = [4.0]
+        with self.assertRaises(TypeError) as context:
+            _check_config(config)
+        self.assertIn("The window_size and anomaly_threshold parameters must both consist of a single value or list "
+                      "of values.",
+                      str(context.exception))
+
+        config["system"]["window_size"] = [10]
+        config["system"]["anomaly_threshold"] = [4.0, 2.0]
+        with self.assertRaises(ValueError) as context:
+            _check_config(config)
+        self.assertIn("The window_size and anomaly_threshold parameters must have same number of entries.",
+                      str(context.exception))
+
+        config["system"]["window_size"] = [10, 30]
+        config["system"]["anomaly_threshold"] = [4.0, 2.0]
 
         _check_config(config)
 
@@ -414,8 +432,8 @@ class DataCollectorTest(unittest.TestCase):
         """Test logging of event anomalies using data set 3."""
         self._load_data("./data/event_test_set3.csv")
         with tempfile.TemporaryDirectory() as temp_dir:
-            window_size = 5
-            buff_size = 25
+            window_size = 4
+            buff_size = 30
             # try with threshold set too high
             with DataCollector(self.mock_com_port,
                                save_dir=temp_dir,
@@ -430,7 +448,7 @@ class DataCollectorTest(unittest.TestCase):
                     sleep(0.01)
                 self.assertIn(len(data_collector.saved_file_names), [0])
 
-            # now with threshold within scope
+            # now with single window/threshold within scope of high short term anomaly
             self.data_index = 0
             with DataCollector(self.mock_com_port,
                                save_dir=temp_dir,
@@ -450,7 +468,56 @@ class DataCollectorTest(unittest.TestCase):
                 df = pd.read_csv(file_path, skiprows=1)
                 df = df.sort_values(by=['event'], ignore_index=True)
                 # check expected high anomaly is in center of saved event buffer
-                self.assertEqual(df['event'][df.shape[0] // 2], 34)
+                self.assertEqual(df['event'][df.shape[0] // 2], 33)
+
+            # now with single window/threshold within scope of high long term anomaly
+            self.data_index = 0
+            buff_size = 30
+            window_size = 10
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               ignore_header_size=0,
+                               anomaly_threshold=3.0,
+                               log_all_events=False,
+                               max_median_frequency=5.0) as data_collector:
+                data_collector.acquire_data()
+                while not data_collector.processing_ended:
+                    sleep(0.01)
+                self.assertIn(len(data_collector.saved_file_names), [1])
+                self.assertTrue(os.path.isdir(os.path.join(temp_dir, "anomaly")))
+                file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
+                self.assertTrue(os.path.isfile(file_path))
+                df = pd.read_csv(file_path, skiprows=1)
+                df = df.sort_values(by=['event'], ignore_index=True)
+                # check expected high anomaly is in center of saved event buffer
+                self.assertEqual(df['event'][df.shape[0] // 2], 68)
+
+            # now with multiple window/threshold settings to capture both anomalies
+            self.data_index = 0
+            buff_size = 30
+            window_size = [4, 10]
+            threshold = [10.0, 3.0]
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               ignore_header_size=0,
+                               anomaly_threshold=threshold,
+                               log_all_events=False,
+                               max_median_frequency=5.0) as data_collector:
+                data_collector.acquire_data()
+                while not data_collector.processing_ended:
+                    sleep(0.01)
+                self.assertIn(len(data_collector.saved_file_names), [1])
+                self.assertTrue(os.path.isdir(os.path.join(temp_dir, "anomaly")))
+                file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
+                self.assertTrue(os.path.isfile(file_path))
+                df = pd.read_csv(file_path, skiprows=1)
+                df = df.sort_values(by=['event'], ignore_index=True)
+                # check expected high anomaly is in center of saved event buffer
+                self.assertEqual(df['event'][df.shape[0] // 2], 68)
 
     def test_data_collector_log_all_events(self):
         """Test logging of all events to file."""
