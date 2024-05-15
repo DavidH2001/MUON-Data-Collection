@@ -21,7 +21,7 @@ from ftplib import FTP
 from datetime import datetime, timezone
 
 DATE_TIME_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
-VERSION: str = "0.3.1"
+VERSION: str = "0.3.2"
 
 
 class Status(Enum):
@@ -74,7 +74,6 @@ class DataCollector:
         self._window_index = 0
         self._window_buff_indices = [0] * self._window_size
         self._ignore_event_count = 0
-        # TODO remove this when decided it is not required.
         # if self._buff_size % self._window_size != 0:
         #     raise ValueError("Require buff size is an odd multiple of window size.")
         self._frequency_array: np.array = np.zeros(self._buff_size)
