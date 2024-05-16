@@ -21,7 +21,7 @@ from ftplib import FTP
 from datetime import datetime, timezone
 
 DATE_TIME_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
-VERSION: str = "0.3.2"
+VERSION: str = "0.3.3"
 
 
 class Status(Enum):
@@ -186,6 +186,9 @@ class DataCollector:
         """Copy file to remote server."""
         try:
             with FTP(self._ip_address, self._user_name, self._user_password) as ftp:
+                if self._user_id not in ftp.nlst():
+                    logging.info(f"Creating remote user directory {self._user_id}")
+                    ftp.mkd(self._user_id)
                 ftp.cwd(self._user_id)
                 with open(file_path, 'rb') as file:
                     target_path = os.path.basename(file_path)
