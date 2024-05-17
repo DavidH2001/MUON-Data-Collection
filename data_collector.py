@@ -21,7 +21,7 @@ from ftplib import FTP
 from datetime import datetime, timezone
 
 DATE_TIME_FORMAT: str = "%Y-%m-%d %H:%M:%S.%f"
-VERSION: str = "0.3.3"
+VERSION: str = "0.3.4"
 
 
 class Status(Enum):
@@ -314,6 +314,7 @@ class DataCollector:
         self._event_counter: int = 0
         self._buff_index: int = 0
         self._look_for_start = True
+        self._buff = self._buff[0:0]
 
     def _acquire_data(self) -> None:
         """
@@ -374,7 +375,7 @@ class DataCollector:
 
             if "###" in data:
                 # assume detector is re-booting
-                logging.info("Detector is re-starting - resetting for new acquisition...")
+                logging.info("Looks like detector has re-started - resetting for new acquisition...")
                 self._reset()
                 continue
 
@@ -395,7 +396,6 @@ class DataCollector:
             if self._buff_index == 0:
                 self._buff_date_time_start = date_time_now
                 self._buff_start_event = data_list[0]
-                logging.info(f"New buffer starting at event {self._buff_start_event} on {self._buff_date_time_start}")
 
             data_list = [date_time_now.strftime(self._date_time_format)[:-3]] + data_list
             if self._event_counter < 10:

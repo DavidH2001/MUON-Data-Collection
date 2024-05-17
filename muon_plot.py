@@ -145,9 +145,9 @@ def main():
         ax1.plot(win_f_df['time'].values, win_f_df['win_f'].values, '-', color='silver')
         ax1.plot(win_f_df['time'].values, win_f_df['median_f'].values, '+', color='gray')
         ax1_2.plot(sipm['time'].values, sipm['sipm'].values, '.', color='red', markersize=3, alpha=0.3)
+        ax1.set_title(f"All Buffers [{metadata['user_id']}  Bn:{metadata['Bn']}  Wn:{metadata['Wn']}  "
+                      f"Thresh:{metadata['threshold']}]", fontsize=9)
     ax1.grid()
-    ax1.set_title(f"All Buffers [{metadata['user_id']}  Bn:{metadata['Bn']}  Wn:{metadata['Wn']}  "
-                  f"Thresh:{metadata['threshold']}]", fontsize=9)
 
     # anomaly plotting
     ax2_2 = ax2.twinx()
