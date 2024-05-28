@@ -561,6 +561,30 @@ class DataCollectorTest(unittest.TestCase):
                 df_anomaly = df_anomaly.sort_values(by='arduino_time', ignore_index=True)
                 self.assertListEqual(df_anomaly['event'].tolist(), list(range(90, 120)))
 
+    def test_data_collector_corrupts_events(self):
+        """Test ..."""
+        self._load_data("./data/event_test_set_corrupt.csv")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window_size = 5
+            buff_size = 25
+            with DataCollector(self.mock_com_port,
+                               save_dir=temp_dir,
+                               buff_size=buff_size,
+                               window_size=window_size,
+                               ignore_header_size=0,
+                               log_all_events=False,
+                               use_arduino_time=self.use_arduino_time,
+                               max_median_frequency=15.0) as data_collector:
+
+                data_collector.acquire_data()
+                while not data_collector.processing_ended:
+                    sleep(0.01)
+                self.assertTrue(os.path.isdir(os.path.join(temp_dir, "anomaly")))
+                self.assertFalse(os.path.isdir(os.path.join(temp_dir, "all")))
+                self.assertIn(len(data_collector.saved_file_names), [2])
+                file_path = os.path.join(temp_dir, "anomaly", data_collector.saved_file_names[0])
+                self.assertTrue(os.path.isfile(file_path))
+
     def test_data_collector_no_save_events(self):
         """Test that no files are saved if not setting save_dir."""
         self._load_data("./data/event_test_set2.csv")

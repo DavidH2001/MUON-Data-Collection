@@ -383,13 +383,38 @@ class DataCollector:
             if len(data_list) < 6:
                 logging.info(f"Bad event line detected '{data}'")
                 continue
+
             data_list = data_list[0:6]
+            if not data_list[0].isdigit():
+                logging.info(f"Bad event line detected '{data}'")
+                continue
             data_list[0] = int(data_list[0])    # event
+
+            if not data_list[1].isdigit():
+                logging.info(f"Bad event line detected '{data}'")
+                continue
             data_list[1] = int(data_list[1])    # arduino time
+
+            if not data_list[2].isdigit():
+                logging.info(f"Bad event line detected '{data}'")
+                continue
             data_list[2] = int(data_list[2])    # ADC
+
+            if not data_list[3].isdigit():
+                logging.info(f"Bad event line detected '{data}'")
+                continue
             data_list[3] = float(data_list[3])  # SIPM
+
+            if not data_list[4].isdigit():
+                logging.info(f"Bad event line detected '{data}'")
+                continue
             data_list[4] = int(data_list[4])    # dead time
+
+            if not data_list[5].replace('.', '', 1).isdigit():
+                logging.info(f"Bad event line detected '{data}'")
+                continue
             data_list[5] = float(data_list[5])  # temp
+
             data_list.extend([pd.NA, pd.NA])
 
             date_time_now = datetime.now(timezone.utc)
